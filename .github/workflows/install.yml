@@ -1,0 +1,43 @@
+name: Install
+
+on:
+  - push
+  - pull_request
+
+jobs:
+  tests:
+    name: ${{ matrix.session }} ${{ matrix.python-version }} / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { python-version: 3.9, os: ubuntu-latest, session: "install" }
+          - { python-version: 3.8, os: ubuntu-latest, session: "install" }
+          - { python-version: 3.7, os: ubuntu-latest, session: "install" }
+          - { python-version: 3.6, os: ubuntu-latest, session: "install" }
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v2.3.4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2.2.2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Upgrade pip
+        run: |
+          pip install --constraint=.github/workflows/constraints.txt pip
+          pip --version
+
+      - name: Install Poetry
+        run: |
+          pip install --constraint=.github/workflows/constraints.txt poetry
+          poetry --version
+
+      - name: Install the package
+        run: |
+          poetry build
+
+
