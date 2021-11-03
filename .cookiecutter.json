@@ -1,0 +1,12 @@
+{
+  "_template": "gh:cjolowicz/cookiecutter-hypermodern-python",
+  "author": "Marius Mather",
+  "development_status": "Development Status :: 3 - Alpha",
+  "email": "marius.mather@sydney.edu.au",
+  "friendly_name": "ant_widgets",
+  "github_user": "marius-mather",
+  "license": "MIT",
+  "package_name": "ant_widgets",
+  "project_name": "ant_widgets",
+  "version": "0.0.1"
+}
