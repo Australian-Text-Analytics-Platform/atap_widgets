@@ -8,3 +8,9 @@
 /docs/_build/
 /src/*.egg-info/
 __pycache__/
+
+# IDE files
+.idea/
+
+# Misc OS stuff
+.DS_Store
