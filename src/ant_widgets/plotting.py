@@ -1,14 +1,15 @@
 from typing import Callable
 
-from bokeh import layouts
-from bokeh.plotting import figure, show
-from bokeh.transform import linear_cmap, factor_cmap
-from bokeh.themes import Theme
-from bokeh import models
-from bokeh import palettes
 import numpy as np
 import pandas as pd
-
+from bokeh import layouts
+from bokeh import models
+from bokeh import palettes
+from bokeh.plotting import figure
+from bokeh.plotting import show
+from bokeh.themes import Theme
+from bokeh.transform import factor_cmap
+from bokeh.transform import linear_cmap
 from conversation import Conversation
 
 BLANK_PLOT_THEME = Theme(
@@ -29,7 +30,7 @@ BLANK_PLOT_THEME = Theme(
 )
 
 WORD_WRAP_CELL_TEMPLATE = """
-<span style="word-wrap: break-word; max-width: 600px; 
+<span style="word-wrap: break-word; max-width: 600px;
       display: inline-block; white-space: normal;">
 <%= value %>
 </span>
@@ -42,7 +43,7 @@ WORD_WRAP_FORMATTER = models.widgets.tables.HTMLTemplateFormatter(
 
 PLOT_HELP_TEXT = """
 <h3>Similarity plot</h3>
-    
+
 <p>
 Click an item on the diagonal to view it in the table below.
 Click anywhere on the background to deselect it.
@@ -168,12 +169,12 @@ class ConversationPlot:
         plot_func = self.create_plot_function()
         try:
             show(plot_func)
-        except AssertionError:
+        except AssertionError as err:
             raise RuntimeError(
                 "No bokeh output detected. Make sure you run "
                 "bokeh.io.output_notebook() at the top of your notebook"
                 "to enable output"
-            )
+            ) from err
 
     def create_plot_function(self) -> Callable:
         """
@@ -206,7 +207,7 @@ class ConversationPlot:
 
             self.diagonal_datasource.selected.on_change("indices", _set_table_filter)
 
-            ## Main plot
+            # Main plot
             plot = figure(width=self.width, height=self.height, aspect_scale=1.0)
             # Plot similarity tiles
             similarity_colour_mapper = linear_cmap("similarity", "Viridis256", 0.0, 1.0)
