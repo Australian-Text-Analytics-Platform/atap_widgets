@@ -385,7 +385,7 @@ pipenv = ["pipenv"]
 name = "en-core-web-sm"
 version = "3.1.0"
 description = "English pipeline optimized for CPU. Components: tok2vec, tagger, parser, senter, ner, attribute_ruler, lemmatizer."
-category = "dev"
+category = "main"
 optional = false
 python-versions = "*"
 
@@ -2091,7 +2091,7 @@ testing = ["pytest (>=4.6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytes
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.7,<4.0"
-content-hash = "c03ef9e832e0e73930ca9f3ba83bf340949c49079440b1d634d067d96b84c063"
+content-hash = "308ca140f95134e4b26788a18cd769eea73be68900e011c2153a4a1f7b5c23b0"
 
 [metadata.files]
 alabaster = [
