@@ -2,8 +2,8 @@ from typing import Optional
 
 import numpy as np
 import pandas as pd
-from sklearn.metrics.pairwise import cosine_similarity
 import spacy
+from sklearn.metrics.pairwise import cosine_similarity
 
 
 def pairwise_cosine_similarity(docs):
