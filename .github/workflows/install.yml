@@ -15,7 +15,6 @@ jobs:
           - { python-version: 3.9, os: ubuntu-latest, session: "install" }
           - { python-version: 3.8, os: ubuntu-latest, session: "install" }
           - { python-version: 3.7, os: ubuntu-latest, session: "install" }
-          - { python-version: 3.6, os: ubuntu-latest, session: "install" }
 
     steps:
       - name: Check out the repository
@@ -39,5 +38,3 @@ jobs:
       - name: Install the package
         run: |
           poetry build
-
-
