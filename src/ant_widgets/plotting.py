@@ -19,7 +19,9 @@ BLANK_PLOT_THEME = Theme(
                 "border_fill_color": "#FFFFFF",
                 "outline_line_color": "#000000",
             },
-            "Axis": {"axis_line_color": None,},
+            "Axis": {
+                "axis_line_color": None,
+            },
             "Grid": {"grid_line_color": None},
             "Title": {"text_color": "black"},
         }
@@ -101,8 +103,7 @@ class ConversationPlot:
         # Position is half the width of the current tile plus half the width,
         #   then we add tile_padding between each
         text_info["position"] = (
-            (text_info["size"] / 2) + 
-            (text_info["size"].shift(1, fill_value=0) / 2)
+            (text_info["size"] / 2) + (text_info["size"].shift(1, fill_value=0) / 2)
         ).cumsum() + (np.arange(len(text_info)) * self.tile_padding)
 
         similarity = (
@@ -258,4 +259,3 @@ class ConversationPlot:
             )
 
         return plot_func
-
