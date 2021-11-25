@@ -31,7 +31,7 @@ class Conversation:
         text_column: str = "text",
         speaker_column: str = "speaker",
         id_column: Optional[str] = None,
-        language_model: str = "en_core_web_lg",
+        language_model: str = "en_core_web_sm",
     ):
         # Set up data
         self.data = data.copy()
