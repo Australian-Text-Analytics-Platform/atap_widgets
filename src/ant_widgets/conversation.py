@@ -1,5 +1,6 @@
 from collections import defaultdict
 from itertools import combinations
+from typing import Dict
 from typing import Optional
 from typing import Sequence
 
@@ -192,7 +193,7 @@ class ConceptSimilarityModel:
     @staticmethod
     def _get_contingency_counts(
         total_windows: int, occurrence: pd.Series, cooccurrence: pd.DataFrame
-    ) -> dict[tuple, pd.DataFrame]:
+    ) -> Dict[tuple, pd.DataFrame]:
         """
         When calculating association statistics it helps to have the contingency
         counts between a term i and another term j.
