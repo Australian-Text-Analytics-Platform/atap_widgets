@@ -112,7 +112,8 @@ class ConceptSimilarityModel:
     def _get_filtered_corpus(self):
         return (self._filter_tokens(doc) for doc in self.corpus)
 
-    def _get_sentence_windows(self, doc: spacy.tokens.Doc, window_size: int):
+    @staticmethod
+    def _get_sentence_windows(doc: spacy.tokens.Doc, window_size: int):
         """
         We can use cytoolz.itertoolz.sliding_window
         to generate sentence windows, but it returns
