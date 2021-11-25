@@ -205,11 +205,13 @@ class ConceptSimilarityModel:
         """
         return {
             ("i", "j"): cooccurrence,
-            ("not_i", "not_j"): total_windows
-            - (
-                (-1 * cooccurrence)
-                .add(occurrence, axis="rows")
-                .add(occurrence, axis="columns")
+            ("not_i", "not_j"): (
+                total_windows
+                - (
+                    (-1 * cooccurrence)
+                    .add(occurrence, axis="rows")
+                    .add(occurrence, axis="columns")
+                )
             ),
             ("i", "not_j"): (-1 * cooccurrence).add(occurrence, axis="rows"),
             ("not_i", "j"): (-1 * cooccurrence).add(occurrence, axis="columns"),
