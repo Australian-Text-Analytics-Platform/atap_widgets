@@ -6,8 +6,14 @@ Reference
     :backlinks: none
 
 
-ant_widgets.__main__
---------------------
+conversation: Process/analyze conversation data
+-------------------------------------------------
 
-.. automodule:: ant_widgets.__main__
+.. automodule:: ant_widgets.conversation
+   :members:
+
+plotting: Visualize conversation similarity
+--------------------------------------------------
+
+.. automodule:: ant_widgets.plotting
    :members:
