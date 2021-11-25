@@ -1,4 +1,5 @@
 from typing import Callable
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -9,7 +10,6 @@ from bokeh.plotting import figure
 from bokeh.plotting import show
 from bokeh.themes import Theme
 from bokeh.transform import factor_cmap
-from bokeh.transform import linear_cmap
 from conversation import Conversation
 
 BLANK_PLOT_THEME = Theme(
@@ -37,10 +37,6 @@ WORD_WRAP_CELL_TEMPLATE = """
 """
 
 
-WORD_WRAP_FORMATTER = models.widgets.tables.HTMLTemplateFormatter(
-    template=WORD_WRAP_CELL_TEMPLATE
-)
-
 PLOT_HELP_TEXT = """
 <h3>Similarity plot</h3>
 
@@ -51,16 +47,45 @@ Click anywhere on the background to deselect it.
 """
 
 
+def _get_word_wrap_formatter():
+    """
+    We can't store this formatter as a constant or it causes
+    issues in Jupyter notebooks to do with reusing
+    models
+    """
+    return models.widgets.tables.HTMLTemplateFormatter(template=WORD_WRAP_CELL_TEMPLATE)
+
+
+# TODO: I think the easiest way to get split tiles for speaker
+#   colours is using bokeh's Wedge shape
 class ConversationPlot:
-    # TODO: Just setting these as constants for now,
-    #   can allow passing a dict of params for more customisation later
-    width = 800
-    height = 800
+    DEFAULT_OPTIONS = {"width": 800, "height": 800, "tile_padding": 1}
 
-    def __init__(self, conversation: Conversation, tile_padding: int = 1):
-        self.tile_padding = tile_padding
+    def __init__(
+        self,
+        conversation: Conversation,
+        similarity_matrix: Optional[pd.DataFrame] = None,
+        options: Optional[dict] = None,
+    ):
+        """
+        Create an interactive conversation plot from the conversation object.
 
-        long_data = self._get_long_data(conversation)
+        Args:
+            conversation: A Conversation object.
+            similarity_matrix: An optional matrix of similarity scores between each
+                turn in the conversation. If this isn't provided, spacy's default
+                similarity calculation for documents (cosine similarity between
+                average word embeddings) will be used.
+                The index and column names for the matrix must match the text_id from
+                the conversation.
+            options: A dictionary of options for the visual style of the plot. See
+                ConversationPlot.DEFAULT_OPTIONS for the available options.
+        """
+        self.options = self.DEFAULT_OPTIONS.copy()
+        if options is not None:
+            self.options.update(options)
+
+        long_data = self._get_long_data(conversation, similarity_matrix)
         self.n_speakers = conversation.n_speakers
         self.speakers = conversation.get_speaker_names()
         self.diagonal_datasource = self._get_diagonal_datasource(
@@ -84,14 +109,60 @@ class ConversationPlot:
         self, long_data: pd.DataFrame
     ) -> models.ColumnDataSource:
         """
-        Get the data for the similarity cells in the lower triangle
+        Get the data for the similarity cells in the lower triangle,
+        including calculating coordinates for the triangles which
+        will be displayed.
         """
-        return models.ColumnDataSource(long_data.query("x_index < y_index"))
+        similarity_data = long_data.query("x_index < y_index").copy()
+        half_width = similarity_data["width"] / 2
+        half_height = similarity_data["height"] / 2
+        triangle_coords = pd.DataFrame(index=similarity_data.index)
+        triangle_coords["left"] = similarity_data["x_position"] - half_width
+        triangle_coords["right"] = similarity_data["x_position"] + half_width
+        # We flip the y-axis for the plot, so subtract to get to the top
+        triangle_coords["top"] = similarity_data["y_position"] - half_height
+        triangle_coords["bottom"] = similarity_data["y_position"] + half_height
 
-    def _get_long_data(self, conversation: Conversation):
+        # Having some issues converting nested pandas cols to ColumnDataSource,
+        #   convert to dict before we try to convert to ColumnDataSource
+        similarity_dict = similarity_data[
+            ["x_index", "y_index", "x_speaker", "y_speaker", "similarity"]
+        ].to_dict(orient="list")
+
+        # Get upper triangle coordinates: bottom left, top left, top right
+        # Use df.values.tolist() to quickly create nested lists from df rows
+        # bokeh's multi_polygon plot function actually needs triply-nested lists,
+        # because it allows for plotting polygons with multiple holes
+        similarity_dict["upper_triangle_x"] = [
+            [[row]]
+            for row in triangle_coords[["left", "left", "right"]].values.tolist()
+        ]
+        similarity_dict["upper_triangle_y"] = [
+            [[row]] for row in triangle_coords[["bottom", "top", "top"]].values.tolist()
+        ]
+
+        # Get lower triangle coordinates: bottom left, top right, bottom right
+        similarity_dict["lower_triangle_x"] = [
+            [[row]]
+            for row in triangle_coords[["left", "right", "right"]].values.tolist()
+        ]
+        similarity_dict["lower_triangle_y"] = [
+            [[row]]
+            for row in triangle_coords[["bottom", "top", "bottom"]].values.tolist()
+        ]
+
+        return models.ColumnDataSource(similarity_dict)
+
+    def _get_long_data(
+        self,
+        conversation: Conversation,
+        similarity_matrix: Optional[pd.DataFrame] = None,
+    ):
         """
-        Convert the similarity matrix to long form for plotting
+        Convert the similarity matrix to long form for plotting.
         """
+        if similarity_matrix is None:
+            similarity_matrix = pd.DataFrame(conversation.vector_similarity_matrix())
         # Info about each text, for merging with similarity data
         text_info = pd.DataFrame(
             {
@@ -105,10 +176,10 @@ class ConversationPlot:
         #   then we add tile_padding between each
         text_info["position"] = (
             (text_info["size"] / 2) + (text_info["size"].shift(1, fill_value=0) / 2)
-        ).cumsum() + (np.arange(len(text_info)) * self.tile_padding)
+        ).cumsum() + (np.arange(len(text_info)) * self.options["tile_padding"])
 
         similarity = (
-            pd.DataFrame(conversation.similarity_matrix()).melt(
+            similarity_matrix.melt(
                 ignore_index=False, var_name="y_index", value_name="similarity"
             )
             # Copy index into x_index column
@@ -138,7 +209,7 @@ class ConversationPlot:
         columns = [
             models.TableColumn(field="x_speaker", title="speaker"),
             models.TableColumn(
-                field="text", title="text", formatter=WORD_WRAP_FORMATTER
+                field="text", title="text", formatter=_get_word_wrap_formatter()
             ),
         ]
         # Start off showing nothing
@@ -169,12 +240,12 @@ class ConversationPlot:
         plot_func = self.create_plot_function()
         try:
             show(plot_func)
-        except AssertionError as err:
+        except AssertionError:
             raise RuntimeError(
                 "No bokeh output detected. Make sure you run "
                 "bokeh.io.output_notebook() at the top of your notebook"
-                "to enable output"
-            ) from err
+                " to enable output"
+            ) from None
 
     def create_plot_function(self) -> Callable:
         """
@@ -186,7 +257,8 @@ class ConversationPlot:
         def _add_plot_tools(plot):
             click_to_select = models.TapTool()
             hover_similarity = models.HoverTool(
-                names=["similarity_tiles"], tooltips=[("Similarity", "@similarity")]
+                names=["similarity_upper", "similarity_lower"],
+                tooltips=[("Similarity", "@similarity")],
             )
             hover_text = models.HoverTool(
                 names=["text_tiles"], tooltips=[("Text", "@text")]
@@ -207,36 +279,49 @@ class ConversationPlot:
 
             self.diagonal_datasource.selected.on_change("indices", _set_table_filter)
 
-            # Main plot
-            plot = figure(width=self.width, height=self.height, aspect_scale=1.0)
-            # Plot similarity tiles
-            similarity_colour_mapper = linear_cmap("similarity", "Viridis256", 0.0, 1.0)
-            plot.rect(
-                x="x_position",
-                y="y_position",
-                width="width",
-                height="height",
-                fill_color=similarity_colour_mapper,
-                source=self.similarity_datasource,
-                name="similarity_tiles",
+            # Main plot ############
+            plot = figure(
+                width=self.options["width"],
+                height=self.options["height"],
+                aspect_scale=1.0,
             )
-            # Colour bar/legend for similarity
-            colour_bar = models.ColorBar(
-                color_mapper=similarity_colour_mapper["transform"]
-            )
-            plot.add_layout(colour_bar, "right")
 
-            # Plot diagonal/text tiles
+            # Set up speaker colours
             speaker_colours = self._get_categorical_palette(self.n_speakers)
             speaker_cmap = factor_cmap(
                 "x_speaker", palette=speaker_colours, factors=self.speakers
             )
+            other_speaker_cmap = factor_cmap(
+                "y_speaker", palette=speaker_colours, factors=self.speakers
+            )
+            # Plot similarity tiles
+            plot.multi_polygons(
+                xs="upper_triangle_x",
+                ys="upper_triangle_y",
+                alpha="similarity",
+                color=speaker_cmap,
+                source=self.similarity_datasource,
+                line_width=0,
+                name="similarity_upper",
+            )
+            plot.multi_polygons(
+                xs="lower_triangle_x",
+                ys="lower_triangle_y",
+                alpha="similarity",
+                color=other_speaker_cmap,
+                source=self.similarity_datasource,
+                line_width=0,
+                name="similarity_lower",
+            )
+
+            # Plot diagonal/text tiles
             plot.rect(
                 x="x_position",
                 y="y_position",
-                fill_color=speaker_cmap,
+                color=speaker_cmap,
                 source=self.diagonal_datasource,
                 name="text_tiles",
+                legend_field="x_speaker",
             )
 
             # Options/style
@@ -244,6 +329,7 @@ class ConversationPlot:
             plot.axis.major_tick_line_color = None
             plot.axis.minor_tick_line_color = None
             plot.axis.major_label_text_color = None
+            plot.legend.title = "Speaker"
 
             # Interactivity/plot tools
             _add_plot_tools(plot)
