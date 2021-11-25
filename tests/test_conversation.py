@@ -62,6 +62,13 @@ def test_get_sentence_windows(sherlock_holmes_doc):
     assert len(windows) == 3
     assert all(len(w) == 3 for w in windows)
 
+    windows2 = list(
+        ConceptSimilarityModel._get_sentence_windows(sherlock_holmes_doc, window_size=2)
+    )
+    # 5 sentences should give 4 windows (final window is sentences 4, 5)
+    assert len(windows2) == 4
+    assert all(len(w) == 2 for w in windows2)
+
 
 def test_get_sentence_windows_short_doc(basic_spacy_nlp):
     """
