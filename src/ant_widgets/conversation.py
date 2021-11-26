@@ -239,25 +239,31 @@ class ConceptSimilarityModel:
             ("not_i", "j"): (-1 * cooccurrence).add(occurrence, axis="columns"),
         }
 
-    def get_term_similarity_matrix(self) -> pd.DataFrame:
+    @classmethod
+    def get_term_similarity_matrix(
+        cls, total_windows: int, occurrence: pd.Series, cooccurrence: pd.DataFrame
+    ) -> pd.DataFrame:
         """
         Calculate the similarity score S(t_i, t_j) between each pair of terms t_i.
 
         See Angus (2012): https://doi.org/10/b49pvx
         for details of how to calculate these scores.
         """
-        counts = self.get_cooccurrence_counts()
-        contingency_counts = self._get_contingency_counts(**counts)
+        contingency_counts = cls._get_contingency_counts(
+            total_windows=total_windows,
+            occurrence=occurrence,
+            cooccurrence=cooccurrence,
+        )
         # Convert to probabilities
         contingency_probs = {
-            k: v / counts["total_windows"] for k, v in contingency_counts.items()
+            k: v / total_windows for k, v in contingency_counts.items()
         }
         # Fixes for zero counts/terms only appearing in one context
         contingency_probs[("i", "not_j")] = contingency_probs[("i", "not_j")].where(
-            ~counts["cooccurrence"].eq(counts["occurrence"], axis="rows"), 1
+            ~cooccurrence.eq(occurrence, axis="rows"), 1
         )
         contingency_probs[("not_i", "j")] = contingency_probs[("not_i", "j")].where(
-            ~counts["cooccurrence"].eq(counts["occurrence"], axis="columns"), 1
+            ~cooccurrence.eq(occurrence, axis="columns"), 1
         )
 
         similarity_matrix = (
@@ -283,7 +289,8 @@ class ConceptSimilarityModel:
         return key_term_similarity @ term_doc_df
 
     def get_conversation_similarity(self):
-        term_similarity_matrix = self.get_term_similarity_matrix()
+        counts = self.get_cooccurrence_counts()
+        term_similarity_matrix = self.get_term_similarity_matrix(**counts)
         concept_vectors = self.get_concept_vectors(term_similarity_matrix)
 
         doc_doc_cosine = pd.DataFrame(
