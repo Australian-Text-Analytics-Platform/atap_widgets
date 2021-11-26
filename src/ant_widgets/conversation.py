@@ -25,6 +25,22 @@ def vector_cosine_similarity(docs: Sequence[spacy.tokens.Doc]) -> np.ndarray:
 
 
 class Conversation:
+    """
+    The Conversation object stores a table of conversation
+    data and processes it to get it ready for analysis.
+
+    Args:
+        data: A dataframe where each row represents one turn in the
+            conversation.
+        text_column: The name of the column in data which holds
+            the actual text of the conversation
+        speaker_column: The name of the column in data which
+            identifies the speaker for that turn
+        id_column: An optional column name with a unique ID for
+            each turn. If not provided, a default "text_id" column
+            will be created.
+    """
+
     def __init__(
         self,
         data: pd.DataFrame,
@@ -55,9 +71,15 @@ class Conversation:
 
     @property
     def n_speakers(self) -> int:
+        """
+        The number of speakers in the conversation.
+        """
         return self.data["speaker"].nunique()
 
     def get_speaker_names(self) -> list:
+        """
+        Get a list of the speakers in the conversation.
+        """
         return self.data["speaker"].unique().tolist()
 
     def vector_similarity_matrix(self) -> pd.DataFrame:
