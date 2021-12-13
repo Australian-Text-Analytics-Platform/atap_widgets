@@ -27,8 +27,7 @@ def sherlock_holmes_doc(sherlock_holmes_five_sentences, basic_spacy_nlp):
 @pytest.fixture
 def sherlock_holmes_dummy_df(sherlock_holmes_doc):
     """
-    Treat each sentence from the Sherlock Holmes example as a turn
-    in a conversation, for checking contingency counts etc.
+    DataFrame, one row per sentence from the Sherlock Holmes example
     """
     df = pd.DataFrame(
         {
@@ -41,4 +40,8 @@ def sherlock_holmes_dummy_df(sherlock_holmes_doc):
 
 @pytest.fixture
 def sherlock_holmes_dummy_conversation(sherlock_holmes_dummy_df):
+    """
+    Treat each sentence from the Sherlock Holmes example as a turn
+    in a conversation, for checking contingency counts etc.
+    """
     return Conversation(sherlock_holmes_dummy_df)
