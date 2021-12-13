@@ -101,7 +101,7 @@ def prepare_text_df(
     text_column: str = "text",
     id_column: str = None,
     language_model: Union[str, spacy.language.Language] = "en_core_web_sm",
-):
+) -> pd.DataFrame:
     """
     Our text processing functions expect a dataframe with
     a few required columns:
@@ -110,8 +110,16 @@ def prepare_text_df(
     - "text_id": a unique ID for each text
     - "spacy_doc": the text, processed into a spacy Doc
 
-    prepare_text_df() takes the input df and creates/renames
+    prepare_text_df() takes an input DataFrame, df, and creates/renames
     columns as necessary to match this format.
+
+    Args:
+        df: Input dataframe containing multiple texts.
+        text_column: The current name of the text column in df
+        id_column: The current column name of the unique identifier for each text
+            in df. If not given, numeric IDs will be generated for each text.
+        language_model: The name of a spacy model like "en_core_web_sm", or a
+            spacy language model instance.
     """
     output = df.copy()
     if id_column is None:
@@ -127,12 +135,26 @@ def prepare_text_df(
 
 
 class SearchWidget:
+    """
+    Interactive widget for searching and displaying concordance
+    results
+    """
+
     def __init__(self, df: pd.DataFrame, results_per_page: int = 20):
+        """
+        Args:
+            df: DataFrame containing texts, as returned by prepare_text_df()
+            results_per_page: How many search results to show at a time
+        """
         self.data = df
         self.results_per_page = results_per_page
         self.search_table = SearchTable(df=self.data)
 
     def show(self):
+        """
+        Display the interactive widget
+        """
+
         def display_results(page: int, **kwargs):
             if not kwargs["keyword"]:
                 return None
@@ -226,6 +248,11 @@ class SearchWidget:
 
 
 class SearchTable:
+    """
+    Search for matches in a text (using plain-text or regular expressions),
+    and display them in a HTML table.
+    """
+
     def __init__(
         self,
         df: pd.DataFrame,
@@ -236,6 +263,22 @@ class SearchTable:
         results_per_page: int = 20,
         window_width: int = 50,
     ):
+        """
+        Initialize the table with data and search settings. In order
+        to allow interactive use, these attributes can be changed
+        after initialization and the updated values will be used
+        next time a search is triggered.
+
+        Args:
+            df: DataFrame of texts, as returned by prepare_text_df().
+            keyword: Word, phrase or regular expression to search for.
+            regex: Use regular expression matching?
+            ignore_case: If False, searches are case-sensitive.
+            whole_word: Only return matches where the search term matches
+               whole words (with space or punctuation either side)
+            results_per_page: Number of results to show at a time.
+            window_width: Number of characters to show either side of a match.
+        """
         self.df = df
         self.keyword = keyword
         self.regex = regex
@@ -247,6 +290,10 @@ class SearchTable:
         self.css = SEARCH_CSS_TEMPLATE.format(element_id=self.element_id)
 
     def _repr_mimebundle_(self, include, exclude):
+        """
+        Define _repr_mimebundle_() so the default behaviour in Jupyter
+        notebooks is to view the HTML table.
+        """
         return {"text/html": self._get_html()}
 
     def _get_search_regex(self) -> re.Pattern:
@@ -272,13 +319,22 @@ class SearchTable:
         return re.compile(regex, flags=flags)
 
     def is_regex_valid(self) -> bool:
+        """
+        Test if the current keyword is a valid regular expression.
+        """
         try:
             _ = self._get_search_regex()
             return True
         except re.error:
             return False
 
-    def _get_results(self):
+    def _get_results(self) -> pd.Series:
+        """
+        Return a Series of matches, with text_id as the index. Each element
+        is a match returned by keyword_in_context(), i.e. a left_context,
+        match, right_context tuple.
+        """
+
         def _get_matches(doc):
             matches = keyword_in_context(
                 doc, keyword=search_regex, window_width=self.window_width
@@ -330,6 +386,10 @@ class SearchTable:
         return self._get_table_html(results, n_total=n_total)
 
     def to_dataframe(self) -> pd.DataFrame:
+        """
+        Return a dataframe returning all the matches for the current
+        keyword.
+        """
         results = self._get_results()
         results_df = results.to_frame()
         # Use apply(pd.Series) to unpack nested lists into columns
@@ -343,6 +403,16 @@ class SearchTable:
         return results_df
 
     def to_excel(self, filename: str, max_col_width: int = 100):
+        """
+        Export matches for the current keyword to Excel.
+
+        Args:
+            filename: Path to write the Excel file to.
+            max_col_width: Maximum width of Excel columns. We try to automatically
+                set the widths of columns to fit their content, but only
+                up to this maximum.
+        """
+
         def _set_col_widths():
             for column in df:
                 col_width = max(df[column].astype(str).map(len).max(), len(column))
