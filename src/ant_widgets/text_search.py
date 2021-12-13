@@ -98,7 +98,7 @@ Incomplete or incorrect regular expression: {error.msg}
 
 def prepare_text_df(
     df: pd.DataFrame,
-    text_column: str,
+    text_column: str = "text",
     id_column: str = None,
     language_model: Union[str, spacy.language.Language] = "en_core_web_sm",
 ):
