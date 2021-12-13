@@ -49,7 +49,7 @@ SEARCH_CSS_TEMPLATE = """
     border: none;
 }}
 
-#{element_id} td.doc_id {{
+#{element_id} td.text_id {{
     border-right: 1px solid #bdbdbd;
 }}
 
@@ -79,7 +79,7 @@ SEARCH_TABLE_TEMPLATE = """
 
 SEARCH_ROW_TEMPLATE = """
 <tr>
-    <td class="atap doc_id">{doc_id}</td>
+    <td class="atap text_id">{text_id}</td>
     <td class="atap context context_left">{match[0]}</td>
     <td class="atap search_highlight">{match[1]}</td>
     <td class="atap context context_right">{match[2]}</td>
@@ -296,8 +296,8 @@ class SearchTable:
 
     def _get_table_html(self, search_results: pd.Series, n_total: int) -> str:
         table_rows = "\n".join(
-            SEARCH_ROW_TEMPLATE.format(doc_id=doc_id, match=match).replace(r"\n", "")
-            for doc_id, match in search_results.iteritems()
+            SEARCH_ROW_TEMPLATE.format(text_id=text_id, match=match).replace(r"\n", "")
+            for text_id, match in search_results.iteritems()
         )
 
         html = SEARCH_TABLE_TEMPLATE.format(
@@ -336,10 +336,10 @@ class SearchTable:
         results_df[["left_context", "match", "right_context"]] = results_df[
             "match"
         ].apply(pd.Series)
-        results_df.index.name = "doc_id"
+        results_df.index.name = "text_id"
         results_df.reset_index(inplace=True)
         # Reorder columns
-        results_df = results_df[["doc_id", "left_context", "match", "right_context"]]
+        results_df = results_df[["text_id", "left_context", "match", "right_context"]]
         return results_df
 
     def to_excel(self, filename: str, max_col_width: int = 100):
