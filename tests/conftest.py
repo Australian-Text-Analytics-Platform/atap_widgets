@@ -1,21 +1,4 @@
-from sys import stderr
-
 import pytest
-import spacy
-
-# Workaround for spacy models being difficult to install
-#   via pip
-try:
-    nlp = spacy.load("en_core_web_sm")
-except OSError:
-    print(
-        "Downloading language model for spaCy\n"
-        "(don't worry, this will only happen once)",
-        file=stderr,
-    )
-    from spacy.cli import download
-
-    download("en_core_web_sm")
 
 
 @pytest.fixture(scope="session")
