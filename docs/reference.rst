@@ -17,3 +17,9 @@ plotting: Visualize conversation similarity
 
 .. automodule:: ant_widgets.plotting
    :members:
+
+text_search: Search for text and view it in a concordance table
+-------------------------------------------------------------------
+
+.. automodule:: ant_widgets.text_search
+   :members:
