@@ -218,7 +218,12 @@ class ConcordanceWidget:
             disabled=False,
         )
         export_button = ipywidgets.Button(
-            description="Export to Excel", disabled=False, button_style="success"
+            description="Export to Excel",
+            disabled=False,
+            button_style="success",
+            tooltip="The excel file will be saved to the same location as the "
+            "notebook on the server. Use the Jupyter Lab sidebar to access "
+            "and download it.",
         )
 
         def _export(widget):
