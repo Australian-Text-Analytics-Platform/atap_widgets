@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ant_widgets"
-version = "0.2.0"
+version = "0.2.1"
 description = "ant_widgets"
 authors = ["Marius Mather <marius.mather@sydney.edu.au>"]
 license = "MIT"
