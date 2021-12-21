@@ -25,9 +25,6 @@ ant_widgets
 .. |Tests| image:: https://github.com/marius-mather/ant_widgets/workflows/Tests/badge.svg
    :target: https://github.com/marius-mather/ant_widgets/actions?workflow=Tests
    :alt: Tests
-.. |Codecov| image:: https://codecov.io/gh/marius-mather/ant_widgets/branch/main/graph/badge.svg
-   :target: https://codecov.io/gh/marius-mather/ant_widgets
-   :alt: Codecov
 .. |pre-commit| image:: https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white
    :target: https://github.com/pre-commit/pre-commit
    :alt: pre-commit
@@ -39,29 +36,28 @@ ant_widgets
 Features
 --------
 
-* TODO
+* Conversation recurrence plotting
+* Concordance search and export
 
 
 Requirements
 ------------
 
-* TODO
+* Python 3.7+
+* spacy
+* pandas
+* Interactive widgets are designed for use in Jupyter Lab (3+)
 
 
 Installation
 ------------
 
-You can install *ant_widgets* via pip_ from PyPI_:
+You can install *ant-widgets* via pip_ from PyPI_:
 
 .. code:: console
 
-   $ pip install ant_widgets
+   $ pip install ant-widgets
 
-
-Usage
------
-
-Please see the `Command-line Reference <Usage_>`_ for details.
 
 
 Contributing
