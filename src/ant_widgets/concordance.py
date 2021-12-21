@@ -134,7 +134,7 @@ def prepare_text_df(
     return output
 
 
-class SearchWidget:
+class ConcordanceWidget:
     """
     Interactive widget for searching and displaying concordance
     results
@@ -148,7 +148,7 @@ class SearchWidget:
         """
         self.data = df
         self.results_per_page = results_per_page
-        self.search_table = SearchTable(df=self.data)
+        self.search_table = ConcordanceTable(df=self.data)
 
     def show(self):
         """
@@ -247,7 +247,7 @@ class SearchWidget:
         )
 
 
-class SearchTable:
+class ConcordanceTable:
     """
     Search for matches in a text (using plain-text or regular expressions),
     and display them in a HTML table.
