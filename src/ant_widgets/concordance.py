@@ -54,7 +54,7 @@ SEARCH_CSS_TEMPLATE = """
 }}
 
 #{element_id} .atap.regex_error {{
-    background-color: #AA7777;
+    background-color: #CC9999;
 }}
 </style>
 """
