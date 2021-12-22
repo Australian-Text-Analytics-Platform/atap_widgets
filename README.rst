@@ -1,9 +1,9 @@
 ant_widgets
 ===========
 
-|PyPI| |Status| |Python Version| |License|
+|PyPI| |Status| |Python Version|
 
-|Read the Docs| |Tests|
+|License| |Tests|
 
 |pre-commit| |Black|
 
@@ -19,11 +19,8 @@ ant_widgets
 .. |License| image:: https://img.shields.io/pypi/l/ant_widgets
    :target: https://opensource.org/licenses/MIT
    :alt: License
-.. |Read the Docs| image:: https://img.shields.io/readthedocs/ant_widgets/latest.svg?label=Read%20the%20Docs
-   :target: https://ant_widgets.readthedocs.io/
-   :alt: Read the documentation at https://ant_widgets.readthedocs.io/
-.. |Tests| image:: https://github.com/marius-mather/ant_widgets/workflows/Tests/badge.svg
-   :target: https://github.com/marius-mather/ant_widgets/actions?workflow=Tests
+.. |Tests| image:: https://github.com/language-research-technology/ant_widgets/actions/workflows/tests.yml/badge.svg
+   :target: https://github.com/language-research-technology/ant_widgets/actions/workflows/tests.yml/badge.svg
    :alt: Tests
 .. |pre-commit| image:: https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white
    :target: https://github.com/pre-commit/pre-commit
