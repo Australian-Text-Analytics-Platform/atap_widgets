@@ -80,9 +80,9 @@ SEARCH_TABLE_TEMPLATE = """
 SEARCH_ROW_TEMPLATE = """
 <tr>
     <td class="atap text_id">{text_id}</td>
-    <td class="atap context context_left">{match[0]}</td>
-    <td class="atap search_highlight">{match[1]}</td>
-    <td class="atap context context_right">{match[2]}</td>
+    <td class="atap context context_left">{left_context}</td>
+    <td class="atap search_highlight">{match}</td>
+    <td class="atap context context_right">{right_context}</td>
 </tr>
 """
 
@@ -94,6 +94,10 @@ Incomplete or incorrect regular expression: {error.msg}
 </span>
 </div>
 """
+
+
+class NoResultsError(Exception):
+    pass
 
 
 def prepare_text_df(
@@ -333,7 +337,7 @@ class ConcordanceTable:
         except re.error:
             return False
 
-    def _get_results(self) -> pd.Series:
+    def _get_results(self) -> pd.DataFrame:
         """
         Return a Series of matches, with text_id as the index. Each element
         is a match returned by keyword_in_context(), i.e. a left_context,
@@ -350,7 +354,20 @@ class ConcordanceTable:
         search_results = self.df["spacy_doc"].apply(_get_matches)
         search_results = search_results.loc[search_results.map(len) > 0].explode()
         search_results.name = "match"
-        return search_results
+
+        if len(search_results) == 0:
+            raise NoResultsError("No results found.")
+
+        results_df = search_results.to_frame()
+        # Use apply(pd.Series) to unpack nested lists into columns
+        results_df[["left_context", "match", "right_context"]] = results_df[
+            "match"
+        ].apply(pd.Series)
+        results_df.index.name = "text_id"
+        results_df.reset_index(inplace=True)
+        # Reorder columns
+        results_df = results_df[["text_id", "left_context", "match", "right_context"]]
+        return results_df
 
     def _get_total_pages(self, n_results: int) -> int:
         return math.ceil(n_results / self.results_per_page)
