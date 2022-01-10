@@ -1,1 +1,1 @@
-"""Test suite for the ant_widgets package."""
+"""Test suite for the atap_widgets package."""

@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 import spacy
 
-from ant_widgets.conversation import Conversation
+from atap_widgets.conversation import Conversation
 
 # Workaround for spacy models being difficult to install
 #   via pip

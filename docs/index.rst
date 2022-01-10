@@ -13,4 +13,4 @@
    contributing
    Code of Conduct <codeofconduct>
    License <license>
-   Changelog <https://github.com/marius-mather/ant_widgets/releases>
+   Changelog <https://github.com/Australian-Text-Analytics-Platform/atap_widgets/releases>

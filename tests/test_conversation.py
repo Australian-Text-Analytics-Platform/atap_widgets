@@ -5,8 +5,8 @@ import random
 import pandas as pd
 import pytest
 
-from ant_widgets.conversation import ConceptSimilarityModel
-from ant_widgets.conversation import Conversation
+from atap_widgets.conversation import ConceptSimilarityModel
+from atap_widgets.conversation import Conversation
 
 
 @pytest.fixture

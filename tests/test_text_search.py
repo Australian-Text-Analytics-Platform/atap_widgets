@@ -1,8 +1,8 @@
 import pandas as pd
 import spacy
 
-from ant_widgets.text_search import prepare_text_df
-from ant_widgets.text_search import SearchTable
+from atap_widgets.text_search import prepare_text_df
+from atap_widgets.text_search import SearchTable
 
 
 def test_prepare_text_df(sherlock_holmes_dummy_df):
