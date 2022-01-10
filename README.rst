@@ -1,5 +1,5 @@
 atap_widgets
-===========
+==============
 
 |PyPI| |Status| |Python Version| |License|
 
@@ -36,13 +36,18 @@ atap_widgets
 Features
 --------
 
-* TODO
+* Conversation recurrence plotting
+* Concordance search and export
 
 
 Requirements
 ------------
 
-* TODO
+* Python 3.7+
+* spacy
+* pandas
+* Interactive widgets are designed for use in Jupyter Lab (3+)
+
 
 
 Installation
