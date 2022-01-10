@@ -7,9 +7,11 @@
 /docs/_build/
 /src/*.egg-info/
 __pycache__/
+.ipynb_checkpoints/
 
 # IDE files
 .idea/
+
 
 # Misc OS stuff
 .DS_Store

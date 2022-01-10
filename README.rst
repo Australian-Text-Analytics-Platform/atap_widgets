@@ -1,9 +1,9 @@
 atap_widgets
 ==============
 
-|PyPI| |Status| |Python Version| |License|
+|PyPI| |Status| |Python Version|
 
-|Read the Docs| |Tests|
+|Read the Docs| |Tests| |License|
 
 |pre-commit| |Black|
 
@@ -49,7 +49,6 @@ Requirements
 * Interactive widgets are designed for use in Jupyter Lab (3+)
 
 
-
 Installation
 ------------
 
@@ -58,12 +57,6 @@ You can install *atap_widgets* via pip_ from PyPI_:
 .. code:: console
 
    $ pip install atap_widgets
-
-
-Usage
------
-
-Please see the `Command-line Reference <Usage_>`_ for details.
 
 
 Contributing

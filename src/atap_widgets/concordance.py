@@ -54,7 +54,7 @@ SEARCH_CSS_TEMPLATE = """
 }}
 
 #{element_id} .atap.regex_error {{
-    background-color: #AA7777;
+    background-color: #CC9999;
 }}
 </style>
 """
@@ -80,9 +80,9 @@ SEARCH_TABLE_TEMPLATE = """
 SEARCH_ROW_TEMPLATE = """
 <tr>
     <td class="atap text_id">{text_id}</td>
-    <td class="atap context context_left">{match[0]}</td>
-    <td class="atap search_highlight">{match[1]}</td>
-    <td class="atap context context_right">{match[2]}</td>
+    <td class="atap context context_left">{left_context}</td>
+    <td class="atap search_highlight">{match}</td>
+    <td class="atap context context_right">{right_context}</td>
 </tr>
 """
 
@@ -94,6 +94,10 @@ Incomplete or incorrect regular expression: {error.msg}
 </span>
 </div>
 """
+
+
+class NoResultsError(Exception):
+    pass
 
 
 def prepare_text_df(
@@ -134,7 +138,7 @@ def prepare_text_df(
     return output
 
 
-class SearchWidget:
+class ConcordanceWidget:
     """
     Interactive widget for searching and displaying concordance
     results
@@ -148,7 +152,7 @@ class SearchWidget:
         """
         self.data = df
         self.results_per_page = results_per_page
-        self.search_table = SearchTable(df=self.data)
+        self.search_table = ConcordanceTable(df=self.data)
 
     def show(self):
         """
@@ -161,12 +165,20 @@ class SearchWidget:
             for attr, value in kwargs.items():
                 setattr(self.search_table, attr, value)
 
-            results = self.search_table._get_results()
-            # Need at least one page
-            n_pages = max(self.search_table._get_total_pages(n_results=len(results)), 1)
-            page_input.max = n_pages
+            try:
+                # This will either be results or a regex error message
+                html = self.search_table._get_html(page=page)
+                if self.search_table.is_regex_valid():
+                    results = self.search_table._get_results()
+                    # Need at least one page
+                    n_pages = max(
+                        self.search_table._get_total_pages(n_results=len(results)), 1
+                    )
+                    page_input.max = n_pages
+            except NoResultsError:
+                n_pages = 1
 
-            display(ipywidgets.HTML(self.search_table._get_html(page=page)))
+            display(ipywidgets.HTML(html))
 
         keyword_input = ipywidgets.Text(description="Keyword(s):")
         regex_toggle_input = ipywidgets.Checkbox(
@@ -198,6 +210,11 @@ class SearchWidget:
             description="Window size (characters):",
             style={"description_width": "initial"},
         )
+        sort_input = ipywidgets.Dropdown(
+            options=["text_id", "left_context", "right_context"],
+            value="text_id",
+            description="Sort by:",
+        )
         output = ipywidgets.interactive_output(
             display_results,
             {
@@ -207,6 +224,7 @@ class SearchWidget:
                 "whole_word": whole_word_input,
                 "page": page_input,
                 "window_width": window_width_input,
+                "sort": sort_input,
             },
         )
         # Excel export
@@ -218,7 +236,12 @@ class SearchWidget:
             disabled=False,
         )
         export_button = ipywidgets.Button(
-            description="Export to Excel", disabled=False, button_style="success"
+            description="Export to Excel",
+            disabled=False,
+            button_style="success",
+            tooltip="The excel file will be saved to the same location as the "
+            "notebook on the server. Use the Jupyter Lab sidebar to access "
+            "and download it.",
         )
 
         def _export(widget):
@@ -243,11 +266,18 @@ class SearchWidget:
         number_inputs = ipywidgets.HBox([page_input, window_width_input])
         number_inputs.layout.justify_content = "flex-start"
         return ipywidgets.VBox(
-            [keyword_input, checkboxes, number_inputs, export_controls, output]
+            [
+                keyword_input,
+                checkboxes,
+                number_inputs,
+                sort_input,
+                export_controls,
+                output,
+            ]
         )
 
 
-class SearchTable:
+class ConcordanceTable:
     """
     Search for matches in a text (using plain-text or regular expressions),
     and display them in a HTML table.
@@ -262,6 +292,7 @@ class SearchTable:
         whole_word: bool = False,
         results_per_page: int = 20,
         window_width: int = 50,
+        sort: str = "text_id",
     ):
         """
         Initialize the table with data and search settings. In order
@@ -278,6 +309,7 @@ class SearchTable:
                whole words (with space or punctuation either side)
             results_per_page: Number of results to show at a time.
             window_width: Number of characters to show either side of a match.
+            sort: Sort by 'text_id', 'left_context' or 'right_context'.
         """
         self.df = df
         self.keyword = keyword
@@ -286,6 +318,7 @@ class SearchTable:
         self.whole_word = whole_word
         self.results_per_page = results_per_page
         self.window_width = window_width
+        self.sort = sort
         self.element_id = "atap_" + str(uuid.uuid4())
         self.css = SEARCH_CSS_TEMPLATE.format(element_id=self.element_id)
 
@@ -328,7 +361,7 @@ class SearchTable:
         except re.error:
             return False
 
-    def _get_results(self) -> pd.Series:
+    def _get_results(self) -> pd.DataFrame:
         """
         Return a Series of matches, with text_id as the index. Each element
         is a match returned by keyword_in_context(), i.e. a left_context,
@@ -345,15 +378,28 @@ class SearchTable:
         search_results = self.df["spacy_doc"].apply(_get_matches)
         search_results = search_results.loc[search_results.map(len) > 0].explode()
         search_results.name = "match"
-        return search_results
+
+        if len(search_results) == 0:
+            raise NoResultsError("No results found.")
+
+        results_df = search_results.to_frame()
+        # Use apply(pd.Series) to unpack nested lists into columns
+        results_df[["left_context", "match", "right_context"]] = results_df[
+            "match"
+        ].apply(pd.Series)
+        results_df.index.name = "text_id"
+        results_df.reset_index(inplace=True)
+        # Reorder columns
+        results_df = results_df[["text_id", "left_context", "match", "right_context"]]
+        return results_df
 
     def _get_total_pages(self, n_results: int) -> int:
         return math.ceil(n_results / self.results_per_page)
 
-    def _get_table_html(self, search_results: pd.Series, n_total: int) -> str:
+    def _get_table_html(self, search_results: pd.DataFrame, n_total: int) -> str:
         table_rows = "\n".join(
-            SEARCH_ROW_TEMPLATE.format(text_id=text_id, match=match).replace(r"\n", "")
-            for text_id, match in search_results.iteritems()
+            SEARCH_ROW_TEMPLATE.format(**row).replace(r"\n", "")
+            for index, row in search_results.iterrows()
         )
 
         html = SEARCH_TABLE_TEMPLATE.format(
@@ -380,9 +426,23 @@ class SearchTable:
 
         start_index = (page - 1) * self.results_per_page
         end_index = (page * self.results_per_page) - 1
-        results = self._get_results()
-        n_total = len(results)
-        results = results.iloc[start_index:end_index]
+        try:
+            results = self._get_results()
+            n_total = len(results)
+            results = results.iloc[start_index:end_index]
+        except NoResultsError:
+            return "No results found. Try a different search term"
+
+        if self.sort == "text_id":
+            results = results.sort_values(by="text_id")
+        elif self.sort in ("left_context", "right_context"):
+            results = self.sort_by_context(results, context=self.sort)
+        else:
+            raise ValueError(
+                f"Invalid sort value {self.sort}: should be 'text_id',"
+                " 'left_context' or 'right_context'"
+            )
+
         return self._get_table_html(results, n_total=n_total)
 
     def to_dataframe(self) -> pd.DataFrame:
@@ -390,17 +450,7 @@ class SearchTable:
         Return a dataframe returning all the matches for the current
         keyword.
         """
-        results = self._get_results()
-        results_df = results.to_frame()
-        # Use apply(pd.Series) to unpack nested lists into columns
-        results_df[["left_context", "match", "right_context"]] = results_df[
-            "match"
-        ].apply(pd.Series)
-        results_df.index.name = "text_id"
-        results_df.reset_index(inplace=True)
-        # Reorder columns
-        results_df = results_df[["text_id", "left_context", "match", "right_context"]]
-        return results_df
+        return self._get_results()
 
     def to_excel(self, filename: str, max_col_width: int = 100):
         """
@@ -434,3 +484,25 @@ class SearchTable:
         _set_col_widths()
 
         writer.save()
+
+    @staticmethod
+    def sort_by_context(results: pd.DataFrame, context: str = "left_context"):
+        """
+        Sort the concordance results by either the left context or right
+        context. For left context, this means sorting by the preceding
+        word, then the word before that, etc.
+        """
+
+        def get_reversed_words(s: pd.Series):
+            return s.str.strip().str.lower().str.split(r"\s").map(lambda x: x[::-1])
+
+        if context == "left_context":
+            return results.sort_values(by=context, key=get_reversed_words)
+        elif context == "right_context":
+            return results.sort_values(
+                by=context, key=lambda x: x.str.strip().str.lower()
+            )
+        else:
+            raise ValueError(
+                "Invalid context option: should be 'left_context' or 'right_context'"
+            )

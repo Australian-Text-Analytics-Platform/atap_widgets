@@ -18,8 +18,8 @@ plotting: Visualize conversation similarity
 .. automodule:: atap_widgets.plotting
    :members:
 
-text_search: Search for text and view it in a concordance table
+concordance: Search for text and view it in a concordance table
 -------------------------------------------------------------------
 
-.. automodule:: atap_widgets.text_search
+.. automodule:: ant_widgets.concordance
    :members:
