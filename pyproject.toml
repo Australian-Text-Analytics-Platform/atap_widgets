@@ -1,13 +1,13 @@
 [tool.poetry]
 name = "atap_widgets"
-version = "0.1.1"
+version = "0.1.2"
 description = "Interactive widgets used by the Australian Text Analytics Platform"
 authors = ["Marius Mather <marius.mather@sydney.edu.au>"]
 license = "MIT"
 readme = "README.rst"
 homepage = "https://github.com/Australian-Text-Analytics-Platform/atap_widgets"
 repository = "https://github.com/Australian-Text-Analytics-Platform/atap_widgets"
-documentation = "https://ant_widgets.readthedocs.io"
+documentation = "https://atap_widgets.readthedocs.io"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Programming Language :: Python :: 3.7",
@@ -16,7 +16,7 @@ classifiers = [
 ]
 
 [tool.poetry.urls]
-Changelog = "https://github.com/Language-Research-Technology/ant_widgets/releases"
+Changelog = "https://github.com/Australian-Text-Analytics-Platform/atap_widgets/releases"
 
 [tool.poetry.dependencies]
 python = ">=3.7.1,<4.0"
@@ -55,7 +55,7 @@ source = ["src", "*/site-packages"]
 
 [tool.coverage.run]
 branch = true
-source = ["ant_widgets"]
+source = ["atap_widgets"]
 
 [tool.coverage.report]
 show_missing = true

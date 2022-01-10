@@ -9,17 +9,17 @@ Reference
 conversation: Process/analyze conversation data
 -------------------------------------------------
 
-.. automodule:: ant_widgets.conversation
+.. automodule:: atap_widgets.conversation
    :members:
 
 plotting: Visualize conversation similarity
 --------------------------------------------------
 
-.. automodule:: ant_widgets.plotting
+.. automodule:: atap_widgets.plotting
    :members:
 
 text_search: Search for text and view it in a concordance table
 -------------------------------------------------------------------
 
-.. automodule:: ant_widgets.text_search
+.. automodule:: atap_widgets.text_search
    :members:

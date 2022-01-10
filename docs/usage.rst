@@ -1,6 +1,6 @@
 Usage
 =====
 
-.. click:: ant_widgets.__main__:main
-   :prog: ant_widgets
+.. click:: atap_widgets.__main__:main
+   :prog: atap_widgets
    :nested: full
