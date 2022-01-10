@@ -3,7 +3,7 @@ atap_widgets
 
 |PyPI| |Status| |Python Version| |License|
 
-|Read the Docs| |Tests| |Codecov|
+|Read the Docs| |Tests|
 
 |pre-commit| |Black|
 
