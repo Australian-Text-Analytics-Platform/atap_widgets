@@ -10,7 +10,8 @@ from bokeh.plotting import figure
 from bokeh.plotting import show
 from bokeh.themes import Theme
 from bokeh.transform import factor_cmap
-from conversation import Conversation
+
+from .conversation import Conversation
 
 BLANK_PLOT_THEME = Theme(
     json={
