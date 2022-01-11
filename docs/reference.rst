@@ -21,5 +21,5 @@ plotting: Visualize conversation similarity
 concordance: Search for text and view it in a concordance table
 -------------------------------------------------------------------
 
-.. automodule:: ant_widgets.concordance
+.. automodule:: atap_widgets.concordance
    :members:
