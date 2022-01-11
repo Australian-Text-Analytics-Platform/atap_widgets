@@ -57,8 +57,6 @@ def _get_word_wrap_formatter():
     return models.widgets.tables.HTMLTemplateFormatter(template=WORD_WRAP_CELL_TEMPLATE)
 
 
-# TODO: I think the easiest way to get split tiles for speaker
-#   colours is using bokeh's Wedge shape
 class ConversationPlot:
     DEFAULT_OPTIONS = {"width": 800, "height": 800, "tile_padding": 1}
 
