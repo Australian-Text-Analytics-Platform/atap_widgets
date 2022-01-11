@@ -58,6 +58,21 @@ def _get_word_wrap_formatter():
 
 
 class ConversationPlot:
+    """
+    Create an interactive conversation plot from a Conversation object.
+
+    Args:
+        conversation: A Conversation object.
+        similarity_matrix: An optional matrix of similarity scores between each
+            turn in the conversation. If this isn't provided, spacy's default
+            similarity calculation for documents (cosine similarity between
+            average word embeddings) will be used.
+            The index and column names for the matrix must match the text_id from
+            the conversation.
+        options: A dictionary of options for the visual style of the plot. See
+            ConversationPlot.DEFAULT_OPTIONS for the available options.
+    """
+
     DEFAULT_OPTIONS = {"width": 800, "height": 800, "tile_padding": 1}
 
     def __init__(
@@ -66,20 +81,6 @@ class ConversationPlot:
         similarity_matrix: Optional[pd.DataFrame] = None,
         options: Optional[dict] = None,
     ):
-        """
-        Create an interactive conversation plot from the conversation object.
-
-        Args:
-            conversation: A Conversation object.
-            similarity_matrix: An optional matrix of similarity scores between each
-                turn in the conversation. If this isn't provided, spacy's default
-                similarity calculation for documents (cosine similarity between
-                average word embeddings) will be used.
-                The index and column names for the matrix must match the text_id from
-                the conversation.
-            options: A dictionary of options for the visual style of the plot. See
-                ConversationPlot.DEFAULT_OPTIONS for the available options.
-        """
         self.options = self.DEFAULT_OPTIONS.copy()
         if options is not None:
             self.options.update(options)
@@ -236,6 +237,10 @@ class ConversationPlot:
         return palettes.d3[palette_name][palette_n][:n_colours]
 
     def show_plot(self):
+        """
+        Show the interactive plot as a Jupyter notebook output.
+        Requires bokeh.io.output_notebook() to have been run.
+        """
         plot_func = self.create_plot_function()
         try:
             show(plot_func)

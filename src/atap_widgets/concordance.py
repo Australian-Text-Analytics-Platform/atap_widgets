@@ -281,6 +281,23 @@ class ConcordanceTable:
     """
     Search for matches in a text (using plain-text or regular expressions),
     and display them in a HTML table.
+
+    The arguments given to the constructor set up the table with
+    initial data and search settings. In order
+    to allow interactive use, these attributes can be changed
+    after initialization and the updated values will be used
+    next time a search is triggered.
+
+    Args:
+        df: DataFrame of texts, as returned by prepare_text_df().
+        keyword: Word, phrase or regular expression to search for.
+        regex: Use regular expression matching?
+        ignore_case: If False, searches are case-sensitive.
+        whole_word: Only return matches where the search term matches
+           whole words (with space or punctuation either side)
+        results_per_page: Number of results to show at a time.
+        window_width: Number of characters to show either side of a match.
+        sort: Sort by 'text_id', 'left_context' or 'right_context'.
     """
 
     def __init__(
@@ -294,23 +311,6 @@ class ConcordanceTable:
         window_width: int = 50,
         sort: str = "text_id",
     ):
-        """
-        Initialize the table with data and search settings. In order
-        to allow interactive use, these attributes can be changed
-        after initialization and the updated values will be used
-        next time a search is triggered.
-
-        Args:
-            df: DataFrame of texts, as returned by prepare_text_df().
-            keyword: Word, phrase or regular expression to search for.
-            regex: Use regular expression matching?
-            ignore_case: If False, searches are case-sensitive.
-            whole_word: Only return matches where the search term matches
-               whole words (with space or punctuation either side)
-            results_per_page: Number of results to show at a time.
-            window_width: Number of characters to show either side of a match.
-            sort: Sort by 'text_id', 'left_context' or 'right_context'.
-        """
         self.df = df
         self.keyword = keyword
         self.regex = regex
@@ -488,7 +488,7 @@ class ConcordanceTable:
     @staticmethod
     def sort_by_context(results: pd.DataFrame, context: str = "left_context"):
         """
-        Sort the concordance results by either the left context or right
+        Sort concordance results by either the left context or right
         context. For left context, this means sorting by the preceding
         word, then the word before that, etc.
         """
