@@ -10,7 +10,7 @@ import spacy
 import textacy
 from cytoolz.itertoolz import concat
 from cytoolz.itertoolz import sliding_window
-from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.metrics import pairwise
 from textacy.representations import matrix_utils
 from textacy.representations.vectorizers import Vectorizer
 
@@ -21,7 +21,7 @@ def vector_cosine_similarity(docs: Sequence[spacy.tokens.Doc]) -> np.ndarray:
     document in docs.
     """
     vectors = np.vstack([doc.vector for doc in docs])
-    return cosine_similarity(vectors)
+    return pairwise.cosine_similarity(vectors)
 
 
 class Conversation:
@@ -91,19 +91,18 @@ class Conversation:
         return pd.DataFrame(matrix, index=self.data.index, columns=self.data.index)
 
 
-class ConceptSimilarityModel:
+class BaseSimilarityModel:
+    """Common code for similarity models, handles creation of corpus etc."""
+
     def __init__(
         self,
         conversation: Conversation,
         n_top_terms: int = 20,
-        sentence_window_size: int = 3,
+        top_terms: Optional[Sequence[str]] = None,
+        **kwargs
     ):
         self.conversation = conversation
-        self.sentence_window_size = sentence_window_size
-        self.n_top_terms = n_top_terms
-        # Create textacy corpus
         self.corpus = self._create_corpus()
-
         # Start counting terms
         self.binary_vectorizer = Vectorizer(
             tf_type="binary",
@@ -113,7 +112,13 @@ class ConceptSimilarityModel:
         self.doc_term_matrix = self.binary_vectorizer.fit_transform(
             self._get_filtered_corpus()
         )
-        self.top_terms = self._get_top_terms()
+
+        if top_terms is None:
+            # Get top terms based on number of documents they appear in
+            self.top_terms = self._get_top_terms(n_top_terms)
+        else:
+            # Use the user-specified terms list
+            self.top_terms = top_terms
 
     def _create_corpus(self) -> textacy.Corpus:
         return textacy.Corpus(
@@ -134,6 +139,99 @@ class ConceptSimilarityModel:
     def _get_filtered_corpus(self):
         return (self._filter_tokens(doc) for doc in self.corpus)
 
+    def _get_top_terms(self, n: int):
+        # TODO: should this work based on raw frequencies, rather than the binary
+        #   per-document count?
+        term_counts = matrix_utils.get_term_freqs(self.doc_term_matrix)
+        top_n_indices = np.flip(np.argsort(term_counts))[:n]
+        top_n_terms = [
+            self.binary_vectorizer.terms_list[index] for index in top_n_indices
+        ]
+        return top_n_terms
+
+
+class VectorSimilarityModel(BaseSimilarityModel):
+    """
+    Generate similarity scores from word vectors.
+    Similar to the algorithm from https://doi.org/10/b49pvx
+    but instead of concept vectors based on local co-occurrences
+    we use the word vectors from a spacy language model.
+    """
+
+    def __init__(
+        self,
+        conversation: Conversation,
+        n_top_terms: int = 20,
+        top_terms: Optional[Sequence[str]] = None,
+    ):
+        super().__init__(
+            conversation=conversation, n_top_terms=n_top_terms, top_terms=top_terms
+        )
+
+    def get_term_similarity_matrix(self) -> pd.DataFrame:
+        """
+        Calculate cosine similarity between the word vectors for each
+        term in the corpus.
+        """
+        vectors = np.vstack(
+            [
+                self.conversation.nlp.vocab.get_vector(term)
+                for term in self.binary_vectorizer.terms_list
+            ]
+        )
+        similarity_matrix = pd.DataFrame(
+            data=pairwise.cosine_similarity(vectors),
+            index=self.binary_vectorizer.terms_list,
+            columns=self.binary_vectorizer.terms_list,
+        )
+        return similarity_matrix
+
+    def get_feature_vectors(self) -> pd.DataFrame:
+        """
+        Get the feature vectors for each document.
+
+        Returns:
+            A dataframe where the rows are the top terms in the corpus,
+            and the columns are documents. Values are the feature value for
+            that term's concept in each document.
+        """
+        term_doc_df = pd.DataFrame(
+            self.doc_term_matrix.T.todense(),
+            index=self.binary_vectorizer.terms_list,
+            columns=self.conversation.data["text_id"],
+        )
+        term_similarity_matrix = self.get_term_similarity_matrix()
+        key_term_similarity = term_similarity_matrix.loc[self.top_terms, :]
+        return key_term_similarity @ term_doc_df
+
+    def get_conversation_similarity(self) -> pd.DataFrame:
+        feature_vectors = self.get_feature_vectors()
+        doc_doc_cosine = pd.DataFrame(
+            pairwise.cosine_similarity(feature_vectors.T),
+            index=self.conversation.data["text_id"],
+            columns=self.conversation.data["text_id"],
+        )
+        return doc_doc_cosine
+
+
+class ConceptSimilarityModel(BaseSimilarityModel):
+    """
+    Generate similarity scores from local co-occurrences,
+    using the algorithm from https://doi.org/10/b49pvx
+    """
+
+    def __init__(
+        self,
+        conversation: Conversation,
+        n_top_terms: int = 20,
+        top_terms: Optional[Sequence[str]] = None,
+        sentence_window_size: int = 3,
+    ):
+        super().__init__(
+            conversation=conversation, n_top_terms=n_top_terms, top_terms=top_terms
+        )
+        self.sentence_window_size = sentence_window_size
+
     @staticmethod
     def _get_sentence_windows(doc: spacy.tokens.Doc, window_size: int):
         """
@@ -148,16 +246,6 @@ class ConceptSimilarityModel:
             return [doc.sents]
         else:
             return sliding_window(window_size, (sentence for sentence in doc.sents))
-
-    def _get_top_terms(self):
-        # TODO: should this work based on raw frequencies, rather than the binary
-        #   per-document count?
-        term_counts = matrix_utils.get_term_freqs(self.doc_term_matrix)
-        top_n_indices = np.flip(np.argsort(term_counts))[: self.n_top_terms]
-        top_n_terms = [
-            self.binary_vectorizer.terms_list[index] for index in top_n_indices
-        ]
-        return top_n_terms
 
     def get_cooccurrence_counts(self) -> dict:
         """
@@ -294,7 +382,7 @@ class ConceptSimilarityModel:
         concept_vectors = self.get_concept_vectors(term_similarity_matrix)
 
         doc_doc_cosine = pd.DataFrame(
-            cosine_similarity(concept_vectors.T),
+            pairwise.cosine_similarity(concept_vectors.T),
             index=self.conversation.data["text_id"],
             columns=self.conversation.data["text_id"],
         )
