@@ -6,10 +6,12 @@ from typing import Sequence
 
 import numpy as np
 import pandas as pd
+import sentence_transformers
 import spacy
 import textacy
 from cytoolz.itertoolz import concat
 from cytoolz.itertoolz import sliding_window
+from sentence_transformers import SentenceTransformer
 from sklearn.metrics import pairwise
 from textacy.representations import matrix_utils
 from textacy.representations.vectorizers import Vectorizer
@@ -387,3 +389,68 @@ class ConceptSimilarityModel(BaseSimilarityModel):
             columns=self.conversation.data["text_id"],
         )
         return doc_doc_cosine
+
+    @property
+    def _term_doc_df(self):
+        return pd.DataFrame(
+            self.doc_term_matrix.T.todense(),
+            index=self.binary_vectorizer.terms_list,
+            columns=self.conversation.data["text_id"],
+        )
+
+    def get_term_overlaps(self, doc1, doc2):
+        top_term_doc_df = self._term_doc_df.loc[self.top_terms, :]
+        term_vector1 = top_term_doc_df.loc[:, doc1]
+        term_vector2 = top_term_doc_df.loc[:, doc2]
+        return term_vector1.dot(term_vector2)
+
+    def get_common_concepts(self, n_concepts: int = 5):
+        """
+        Get the top n concepts each pair of documents has in common.
+
+        :param n_concepts: Number of concepts to include for each pair
+           of documents
+        :return:
+        """
+
+        def normalize_concept_vector(v):
+            # Ignore all zero concept vectors
+            if (v == 0).all():
+                return v
+            return v / np.linalg.norm(v)
+
+        counts = self.get_cooccurrence_counts()
+        term_similarity_matrix = self.get_term_similarity_matrix(**counts)
+        concept_vectors = (
+            self.get_concept_vectors(term_similarity_matrix)
+            .apply(normalize_concept_vector)
+            .astype("float")
+        )
+        results = {}
+        for doc1, doc2 in combinations(concept_vectors.columns, 2):
+            doc_vectors = concept_vectors.loc[:, (doc1, doc2)]
+            product = doc_vectors.prod(axis="columns")
+            product = product.loc[product > 0]
+            top_concepts = product.nlargest(n_concepts).index.tolist()
+            key = (doc1, doc2)
+            if not doc1 <= doc2:
+                key = (doc2, doc1)
+            results[key] = top_concepts
+        return results
+
+
+class EmbeddingModel:
+    def __init__(
+        self, conversation: Conversation, model_name: str = "stsb-roberta-base-v2"
+    ):
+        self.conversation = conversation
+        self.model = SentenceTransformer(model_name)
+
+    def get_conversation_similarity(self):
+        encoding = self.model.encode(self.conversation.data["text"])
+        similarity = sentence_transformers.util.pytorch_cos_sim(encoding, encoding)
+        return pd.DataFrame(
+            data=similarity.numpy(),
+            index=self.conversation.data["text_id"],
+            columns=self.conversation.data["text_id"],
+        )
