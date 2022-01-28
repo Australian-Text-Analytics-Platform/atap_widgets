@@ -11,6 +11,7 @@ from bokeh.plotting import show
 from bokeh.themes import Theme
 from bokeh.transform import factor_cmap
 
+from .conversation import ConceptSimilarityModel
 from .conversation import Conversation
 
 BLANK_PLOT_THEME = Theme(
@@ -79,12 +80,14 @@ class ConversationPlot:
         self,
         conversation: Conversation,
         similarity_matrix: Optional[pd.DataFrame] = None,
+        similarity_model: Optional[ConceptSimilarityModel] = None,
         options: Optional[dict] = None,
     ):
         self.options = self.DEFAULT_OPTIONS.copy()
         if options is not None:
             self.options.update(options)
 
+        self.similarity_model = similarity_model
         long_data = self._get_long_data(conversation, similarity_matrix)
         self.n_speakers = conversation.n_speakers
         self.speakers = conversation.get_speaker_names()
@@ -123,11 +126,23 @@ class ConversationPlot:
         triangle_coords["top"] = similarity_data["y_position"] - half_height
         triangle_coords["bottom"] = similarity_data["y_position"] + half_height
 
+        # Concepts in common
+        def _get_concepts(row):
+            concepts = common_concepts[(row["x_index"], row["y_index"])]
+            return ", ".join(concepts)
+
+        if self.similarity_model is not None:
+            common_concepts = self.similarity_model.get_common_concepts()
+            similarity_data["concepts"] = similarity_data.apply(
+                _get_concepts, axis="columns"
+            )
+
         # Having some issues converting nested pandas cols to ColumnDataSource,
         #   convert to dict before we try to convert to ColumnDataSource
-        similarity_dict = similarity_data[
-            ["x_index", "y_index", "x_speaker", "y_speaker", "similarity"]
-        ].to_dict(orient="list")
+        columns = ["x_index", "y_index", "x_speaker", "y_speaker", "similarity"]
+        if self.similarity_model is not None:
+            columns.append("concepts")
+        similarity_dict = similarity_data[columns].to_dict(orient="list")
 
         # Get upper triangle coordinates: bottom left, top left, top right
         # Use df.values.tolist() to quickly create nested lists from df rows
@@ -259,14 +274,22 @@ class ConversationPlot:
         """
 
         def _add_plot_tools(plot):
-            click_to_select = models.TapTool()
+            similarity_tooltips = [
+                ("ID (column)", "@x_index"),
+                ("ID (row)", "@y_index"),
+                ("Similarity", "@similarity"),
+            ]
+            if self.similarity_model is not None:
+                similarity_tooltips.append(("Shared concepts:", "@concepts"))
             hover_similarity = models.HoverTool(
                 names=["similarity_upper", "similarity_lower"],
-                tooltips=[("Similarity", "@similarity")],
+                tooltips=similarity_tooltips,
             )
-            hover_text = models.HoverTool(
-                names=["text_tiles"], tooltips=[("Text", "@text")]
-            )
+
+            text_tooltips = [("ID", "@x_index"), ("Text", "@text")]
+            hover_text = models.HoverTool(names=["text_tiles"], tooltips=text_tooltips)
+
+            click_to_select = models.TapTool()
             plot.add_tools(hover_similarity, hover_text, click_to_select)
             plot.toolbar.active_tap = click_to_select
 

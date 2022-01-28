@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "atap_widgets"
-version = "0.1.7"
+version = "0.1.8"
 description = "Interactive widgets used by the Australian Text Analytics Platform"
 authors = ["Marius Mather <marius.mather@sydney.edu.au>"]
 license = "MIT"
@@ -26,6 +26,7 @@ pandas = "^1.3"
 xlsxwriter = "^3.0.2"
 spacy = "^3.1"
 textacy = "*"
+sentence-transformers = "^2.1.0"
 
 [tool.poetry.dev-dependencies]
 jupyterlab = "^3.2.5"
