@@ -111,7 +111,9 @@ def safety(session: Session) -> None:
     """Scan dependencies for insecure packages."""
     requirements = session.poetry.export_requirements()
     session.install("safety")
-    session.run("safety", "check", "--full-report", f"--file={requirements}")
+    session.run("safety", "check", "--full-report", f"--file={requirements}",
+                # We can't upgrade numpy to 1.22 without dropping Python 3.7
+                "--ignore", "44715", "--ignore", "44716", "--ignore", "44717")
 
 
 @session(python=python_versions)
