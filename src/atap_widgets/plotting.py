@@ -70,6 +70,8 @@ class ConversationPlot:
             average word embeddings) will be used.
             The index and column names for the matrix must match the text_id from
             the conversation.
+        similarity_model: A ConceptSimilarityModel instance that will be used
+            to identify the individual terms in common between turns.
         options: A dictionary of options for the visual style of the plot. See
             ConversationPlot.DEFAULT_OPTIONS for the available options.
     """
@@ -304,7 +306,27 @@ class ConversationPlot:
                     filters=[models.IndexFilter(new)], source=self.diagonal_datasource
                 )
 
+            def _set_table_filter_from_similarity(attr, old, new):
+                x_texts = [self.similarity_datasource.data["x_index"][i] for i in new]
+                print(x_texts)
+                y_texts = [self.similarity_datasource.data["y_index"][i] for i in new]
+                print(y_texts)
+                matching = [
+                    x in x_texts or y in y_texts
+                    for (x, y) in zip(
+                        self.diagonal_datasource.data["x_index"],
+                        self.diagonal_datasource.data["y_index"],
+                    )
+                ]
+                text_table.view = models.CDSView(
+                    filters=[models.BooleanFilter(matching)],
+                    source=self.diagonal_datasource,
+                )
+
             self.diagonal_datasource.selected.on_change("indices", _set_table_filter)
+            self.similarity_datasource.selected.on_change(
+                "indices", _set_table_filter_from_similarity
+            )
 
             # Main plot ############
             plot = figure(
