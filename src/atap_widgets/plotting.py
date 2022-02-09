@@ -308,9 +308,7 @@ class ConversationPlot:
 
             def _set_table_filter_from_similarity(attr, old, new):
                 x_texts = [self.similarity_datasource.data["x_index"][i] for i in new]
-                print(x_texts)
                 y_texts = [self.similarity_datasource.data["y_index"][i] for i in new]
-                print(y_texts)
                 matching = [
                     x in x_texts or y in y_texts
                     for (x, y) in zip(
