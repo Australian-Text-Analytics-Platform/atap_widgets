@@ -1678,8 +1678,8 @@ win32 = ["pywin32"]
 
 [[package]]
 name = "sentence-transformers"
-version = "2.1.0"
-description = "Sentence Embeddings using BERT / RoBERTa / XLM-R"
+version = "2.2.0"
+description = "Multilingual text embeddings"
 category = "main"
 optional = false
 python-versions = "*"
@@ -1691,7 +1691,6 @@ numpy = "*"
 scikit-learn = "*"
 scipy = "*"
 sentencepiece = "*"
-tokenizers = ">=0.10.3"
 torch = ">=1.6.0"
 torchvision = "*"
 tqdm = "*"
@@ -3528,7 +3527,7 @@ send2trash = [
     {file = "Send2Trash-1.8.0.tar.gz", hash = "sha256:d2c24762fd3759860a0aff155e45871447ea58d2be6bdd39b5c8f966a0c99c2d"},
 ]
 sentence-transformers = [
-    {file = "sentence-transformers-2.1.0.tar.gz", hash = "sha256:ccf95fa214546ac64428e86286e9d674b62900893936b46b26c904eb9dfcad19"},
+    {file = "sentence-transformers-2.2.0.tar.gz", hash = "sha256:c7365228b6d24e4d73cf49d409421820887ca43c86d49f264b68cfa00d761f96"},
 ]
 sentencepiece = [
     {file = "sentencepiece-0.1.96-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:cc969e6694fb27fba7cee2953f350804faf03913f25ae1ee713a7b8a1bc08018"},
