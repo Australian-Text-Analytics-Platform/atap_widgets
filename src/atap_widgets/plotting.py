@@ -1,3 +1,4 @@
+import warnings
 from typing import Callable
 from typing import Optional
 
@@ -253,7 +254,7 @@ class ConversationPlot:
         palette_n = max(n_colours, 3)
         return palettes.d3[palette_name][palette_n][:n_colours]
 
-    def show_plot(self):
+    def show(self):
         """
         Show the interactive plot as a Jupyter notebook output.
         Requires bokeh.io.output_notebook() to have been run.
@@ -267,6 +268,10 @@ class ConversationPlot:
                 "bokeh.io.output_notebook() at the top of your notebook"
                 " to enable output"
             ) from None
+
+    def show_plot(self):
+        warnings.warn("show_plot() has been renamed to show()", DeprecationWarning)
+        self.show()
 
     def create_plot_function(self) -> Callable:
         """
