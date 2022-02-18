@@ -1,6 +1,7 @@
 from collections import defaultdict
 from itertools import combinations
 from typing import Dict
+from typing import List
 from typing import Optional
 from typing import Sequence
 
@@ -24,6 +25,21 @@ def vector_cosine_similarity(docs: Sequence[spacy.tokens.Doc]) -> np.ndarray:
     """
     vectors = np.vstack([doc.vector for doc in docs])
     return pairwise.cosine_similarity(vectors)
+
+
+def filter_tokens(doc: spacy.tokens.Doc):
+    """
+    Filter out stopwords, punctuation and spaces.
+    Return a generator that yields tokens, converted
+    to lowercase
+    """
+    for token in doc:
+        if not token.is_stop and not token.is_punct and not token.is_space:
+            yield token.lower_
+
+
+def filter_corpus(corpus: textacy.Corpus):
+    return (filter_tokens(doc) for doc in corpus)
 
 
 class Conversation:
@@ -92,6 +108,49 @@ class Conversation:
         matrix = vector_cosine_similarity(self.data["spacy_doc"])
         return pd.DataFrame(matrix, index=self.data.index, columns=self.data.index)
 
+    def create_corpus(self) -> textacy.Corpus:
+        return textacy.Corpus(lang=self.nlp, data=self.data["text"])
+
+    # TODO: allow n-gram frequencies, not just individual words?
+    def get_term_frequencies(self, method: str = "overall"):
+        """
+        Get the term frequencies for different terms in the conversation
+
+        :param method: "overall", for the total number of occurrences,
+          "n_turns", for the number of turns each term occurs in
+        :return:
+        """
+        methods = {"overall", "n_turns"}
+        if method not in methods:
+            raise ValueError(f"{method} must be one of {methods}")
+
+        corpus = self.create_corpus()
+        if method == "overall":
+            tf_type = "linear"
+        elif method == "n_turns":
+            tf_type = "binary"
+        vectorizer = Vectorizer(
+            tf_type=tf_type,
+            idf_type=None,
+            dl_type=None,
+        )
+        doc_term_matrix = vectorizer.fit_transform(filter_corpus(corpus))
+        term_freqs = matrix_utils.get_term_freqs(doc_term_matrix)
+        term_df = pd.DataFrame({"term": vectorizer.terms_list, "frequency": term_freqs})
+        term_df.sort_values("frequency", ascending=False, inplace=True)
+        return term_df
+
+    def get_most_common_terms(self, n: int = 10, method: str = "overall") -> List[str]:
+        """
+        Get the n most common terms
+
+        :param n: number of top terms
+        :param method: see Conversation.get_term_frequencies()
+        :return:
+        """
+        terms = self.get_term_frequencies(method=method)
+        return terms["term"].iloc[:n].tolist()
+
 
 class BaseSimilarityModel:
     """Common code for similarity models, handles creation of corpus etc."""
@@ -101,10 +160,10 @@ class BaseSimilarityModel:
         conversation: Conversation,
         n_top_terms: int = 20,
         top_terms: Optional[Sequence[str]] = None,
-        **kwargs
+        **kwargs,
     ):
         self.conversation = conversation
-        self.corpus = self._create_corpus()
+        self.corpus = self.conversation.create_corpus()
         # Start counting terms
         self.binary_vectorizer = Vectorizer(
             tf_type="binary",
@@ -112,20 +171,17 @@ class BaseSimilarityModel:
             dl_type=None,
         )
         self.doc_term_matrix = self.binary_vectorizer.fit_transform(
-            self._get_filtered_corpus()
+            filter_corpus(self.corpus)
         )
 
         if top_terms is None:
             # Get top terms based on number of documents they appear in
-            self.top_terms = self._get_top_terms(n_top_terms)
+            self.top_terms = self.conversation.get_most_common_terms(
+                n=n_top_terms, method="n_turns"
+            )
         else:
             # Use the user-specified terms list
             self.top_terms = top_terms
-
-    def _create_corpus(self) -> textacy.Corpus:
-        return textacy.Corpus(
-            lang=self.conversation.nlp, data=self.conversation.data["text"]
-        )
 
     @staticmethod
     def _filter_tokens(doc: spacy.tokens.Doc):
@@ -140,16 +196,6 @@ class BaseSimilarityModel:
 
     def _get_filtered_corpus(self):
         return (self._filter_tokens(doc) for doc in self.corpus)
-
-    def _get_top_terms(self, n: int):
-        # TODO: should this work based on raw frequencies, rather than the binary
-        #   per-document count?
-        term_counts = matrix_utils.get_term_freqs(self.doc_term_matrix)
-        top_n_indices = np.flip(np.argsort(term_counts))[:n]
-        top_n_terms = [
-            self.binary_vectorizer.terms_list[index] for index in top_n_indices
-        ]
-        return top_n_terms
 
 
 class VectorSimilarityModel(BaseSimilarityModel):
