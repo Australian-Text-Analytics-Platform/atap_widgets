@@ -39,6 +39,9 @@ def filter_tokens(doc: spacy.tokens.Doc):
 
 
 def filter_corpus(corpus: textacy.Corpus):
+    """
+    Filter stopwords, punctuation and spaces out of a corpus
+    """
     return (filter_tokens(doc) for doc in corpus)
 
 
