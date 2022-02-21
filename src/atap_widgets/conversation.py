@@ -82,10 +82,23 @@ class Conversation:
         self.data.set_index("text_id", drop=False, inplace=True)
         # Apply NLP
         self.nlp = spacy.load(language_model)
-        self.data["spacy_doc"] = self.data["text"].apply(self.nlp)
+        self.data["spacy_doc"] = self._create_spacy_docs()
 
     def __str__(self):
         return "Conversation object:\n" + str(self.data.head())
+
+    def _create_spacy_docs(self) -> pd.Series:
+        """
+        Convert the "text" column of the data to a spacy Doc
+        """
+        return self.data["text"].apply(self.nlp)
+
+    def add_stopword(self, word: str):
+        self.nlp.Defaults.stop_words.add(word)
+        for stopword in self.nlp.Defaults.stop_words:
+            self.nlp.vocab[stopword].is_stop = True
+        # Regenerate spacy docs
+        self.data["spacy_doc"] = self._create_spacy_docs()
 
     @property
     def n_speakers(self) -> int:
