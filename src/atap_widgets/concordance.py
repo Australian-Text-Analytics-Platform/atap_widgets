@@ -391,6 +391,16 @@ class ConcordanceTable:
         results_df.reset_index(inplace=True)
         # Reorder columns
         results_df = results_df[["text_id", "left_context", "match", "right_context"]]
+        # Sort
+        if self.sort == "text_id":
+            results_df = results_df.sort_values(by="text_id")
+        elif self.sort in ("left_context", "right_context"):
+            results_df = self.sort_by_context(results_df, context=self.sort)
+        else:
+            raise ValueError(
+                f"Invalid sort value {self.sort}: should be 'text_id',"
+                " 'left_context' or 'right_context'"
+            )
         return results_df
 
     def _get_total_pages(self, n_results: int) -> int:
@@ -432,16 +442,6 @@ class ConcordanceTable:
             results = results.iloc[start_index:end_index]
         except NoResultsError:
             return "No results found. Try a different search term"
-
-        if self.sort == "text_id":
-            results = results.sort_values(by="text_id")
-        elif self.sort in ("left_context", "right_context"):
-            results = self.sort_by_context(results, context=self.sort)
-        else:
-            raise ValueError(
-                f"Invalid sort value {self.sort}: should be 'text_id',"
-                " 'left_context' or 'right_context'"
-            )
 
         return self._get_table_html(results, n_total=n_total)
 
