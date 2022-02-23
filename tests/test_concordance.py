@@ -46,3 +46,22 @@ def test_text_search_regex():
     table = ConcordanceTable(df, keyword=r"^[ACGT]+$", regex=True)
     results = table.to_dataframe()
     assert (results["text_id"] == [1, 4]).all()
+
+
+def test_sorting(sortable_text_df):
+    df = prepare_text_df(sortable_text_df, id_column="text_id")
+    table = ConcordanceTable(df, keyword="pen", sort="text_id")
+
+    # text_id/default sort: original order
+    text_id_sorted = table.to_dataframe()
+    assert (text_id_sorted["text_id"] == [1, 2, 3]).all()
+
+    # Left context sort: My, The, Your should be 2, 1, 3
+    table.sort = "left_context"
+    left_context_sorted = table.to_dataframe()
+    assert (left_context_sorted["text_id"] == [2, 1, 3]).all()
+
+    # Right context sort: blue, green, red should be 3, 2, 1
+    table.sort = "right_context"
+    right_context_sorted = table.to_dataframe()
+    assert (right_context_sorted["text_id"] == [3, 2, 1]).all()

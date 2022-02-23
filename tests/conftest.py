@@ -61,3 +61,14 @@ def sherlock_holmes_dummy_conversation(sherlock_holmes_dummy_df):
     in a conversation, for checking contingency counts etc.
     """
     return Conversation(sherlock_holmes_dummy_df)
+
+
+@pytest.fixture
+def sortable_text_df():
+    df = pd.DataFrame(
+        {
+            "text": ["The pen is red", "My pen is green", "Your pen is blue"],
+            "text_id": [1, 2, 3],
+        }
+    )
+    return df
