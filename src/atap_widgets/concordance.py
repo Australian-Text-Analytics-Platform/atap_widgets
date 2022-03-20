@@ -1,6 +1,7 @@
 import math
 import re
 import uuid
+from typing import List
 from typing import Union
 
 import ipywidgets
@@ -211,9 +212,21 @@ class ConcordanceWidget:
             style={"description_width": "initial"},
         )
         sort_input = ipywidgets.Dropdown(
-            options=["text_id", "left_context", "right_context"],
+            options=[
+                ("Text ID", "text_id"),
+                ("Left context", "left"),
+                ("Right context", "right"),
+            ],
             value="text_id",
             description="Sort by:",
+        )
+        sort_offset_input = ipywidgets.BoundedIntText(
+            value=1,
+            min=1,
+            # TODO: We could remove this limit if needed
+            max=5,
+            description="Offset for context sort:",
+            style={"description_width": "initial"},
         )
         output = ipywidgets.interactive_output(
             display_results,
@@ -225,6 +238,7 @@ class ConcordanceWidget:
                 "page": page_input,
                 "window_width": window_width_input,
                 "sort": sort_input,
+                "sort_offset": sort_offset_input,
             },
         )
         # Excel export
@@ -265,12 +279,14 @@ class ConcordanceWidget:
         checkboxes.layout.justify_content = "flex-start"
         number_inputs = ipywidgets.HBox([page_input, window_width_input])
         number_inputs.layout.justify_content = "flex-start"
+        sort_layout = ipywidgets.HBox([sort_input, sort_offset_input])
+        sort_layout.layout.justify_content = "flex-start"
         return ipywidgets.VBox(
             [
                 keyword_input,
                 checkboxes,
                 number_inputs,
-                sort_input,
+                sort_layout,
                 export_controls,
                 output,
             ]
@@ -297,7 +313,7 @@ class ConcordanceTable:
            whole words (with space or punctuation either side)
         results_per_page: Number of results to show at a time.
         window_width: Number of characters to show either side of a match.
-        sort: Sort by 'text_id', 'left_context' or 'right_context'.
+        sort: Sort by 'text_id', 'left' or 'right'.
     """
 
     def __init__(
@@ -310,6 +326,7 @@ class ConcordanceTable:
         results_per_page: int = 20,
         window_width: int = 50,
         sort: str = "text_id",
+        sort_offset: int = 1,
     ):
         self.df = df
         self.keyword = keyword
@@ -319,6 +336,7 @@ class ConcordanceTable:
         self.results_per_page = results_per_page
         self.window_width = window_width
         self.sort = sort
+        self.sort_offset = sort_offset
         self.element_id = "atap_" + str(uuid.uuid4())
         self.css = SEARCH_CSS_TEMPLATE.format(element_id=self.element_id)
 
@@ -394,12 +412,14 @@ class ConcordanceTable:
         # Sort
         if self.sort == "text_id":
             results_df = results_df.sort_values(by="text_id")
-        elif self.sort in ("left_context", "right_context"):
-            results_df = self.sort_by_context(results_df, context=self.sort)
+        elif self.sort in ("left", "right"):
+            results_df = self.sort_by_context(
+                results_df, context=self.sort, offset=self.sort_offset
+            )
         else:
             raise ValueError(
                 f"Invalid sort value {self.sort}: should be 'text_id',"
-                " 'left_context' or 'right_context'"
+                " 'left' or 'right'"
             )
         return results_df
 
@@ -486,23 +506,51 @@ class ConcordanceTable:
         writer.save()
 
     @staticmethod
-    def sort_by_context(results: pd.DataFrame, context: str = "left_context"):
+    def sort_by_context(results: pd.DataFrame, context: str = "left", offset: int = 1):
         """
         Sort concordance results by either the left context or right
         context. For left context, this means sorting by the preceding
         word, then the word before that, etc.
+
+        Args:
+            offset: 1, 2, or 3 to sort by 1st, 2nd or 3rd preceding/following word.
+              Note that this is 1-based (unlike normal Python indexing)
         """
 
-        def get_reversed_words(s: pd.Series):
-            return s.str.strip().str.lower().str.split(r"\s").map(lambda x: x[::-1])
+        def get_words(s: pd.Series):
+            """
+            Split the strings in s into a list of words
 
-        if context == "left_context":
-            return results.sort_values(by=context, key=get_reversed_words)
-        elif context == "right_context":
-            return results.sort_values(
-                by=context, key=lambda x: x.str.strip().str.lower()
-            )
+            Returns:
+                 A series where each element is a list of words
+            """
+            return s.str.strip().str.lower().str.split(r"\s")
+
+        def get_reversed_words(s: pd.Series):
+            return get_words(s).map(lambda x: x[::-1])
+
+        def get_at_offset(word_list: List[str]):
+            """
+            Get the word at the current offset, or return a dummy value
+            if that's out of range
+            """
+            try:
+                # We accept a 1-based offset, subtract to get a 0-based
+                return word_list[offset - 1]
+            except IndexError:
+                # Push missing items to the bottom
+                # A bit of a hack, not sure if there's a better way to do this
+                return "zzzzz"
+
+        def left_sort_key(s: pd.Series):
+            return get_reversed_words(s).map(get_at_offset)
+
+        def right_sort_key(s: pd.Series):
+            return get_words(s).map(get_at_offset)
+
+        if context == "left":
+            return results.sort_values(by="left_context", key=left_sort_key)
+        elif context == "right":
+            return results.sort_values(by="right_context", key=right_sort_key)
         else:
-            raise ValueError(
-                "Invalid context option: should be 'left_context' or 'right_context'"
-            )
+            raise ValueError("Invalid context option: should be 'left' or 'right'")
