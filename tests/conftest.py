@@ -72,3 +72,21 @@ def sortable_text_df():
         }
     )
     return df
+
+
+@pytest.fixture
+def multisortable_text_df():
+    """
+    Example texts that are sortable by 1st/2nd/3rd word in the left/right context
+    """
+    df = pd.DataFrame(
+        {
+            "text": [
+                "Carrot banana apple search carrot banana apple",
+                "Banana apple carrot search apple carrot banana",
+                "Apple carrot banana search banana apple carrot",
+            ],
+            "text_id": [1, 2, 3],
+        }
+    )
+    return df
