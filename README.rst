@@ -43,7 +43,7 @@ Features
 Requirements
 ------------
 
-* Python 3.7+
+* Python 3.8+
 * spacy
 * pandas
 * Interactive widgets are designed for use in Jupyter Lab (3+)
