@@ -1,3 +1,5 @@
+import os
+import urllib
 import warnings
 from typing import Callable
 from typing import Optional
@@ -14,6 +16,8 @@ from bokeh.transform import factor_cmap
 
 from .conversation import ConceptSimilarityModel
 from .conversation import Conversation
+
+DEFAULT_BOKEH_PORT = 48_246
 
 BLANK_PLOT_THEME = Theme(
     json={
@@ -48,6 +52,31 @@ Click an item on the diagonal to view it in the table below.
 Click anywhere on the background to deselect it.
 </p>
 """
+
+
+def _get_remote_jupyter_proxy_url(
+    port: int, base_url: str = "https://notebooks.gesis.org/"
+):
+    """
+    Callable to configure Bokeh's show method when a proxy must be
+    configured.
+
+    If port is None we're asking about the URL
+    for the origin header.
+    """
+    host = urllib.parse.urlparse(base_url).netloc
+
+    # If port is None we're asking for the URL origin
+    # so return the public hostname.
+    if port is None:
+        return host
+
+    service_url_path = os.environ["JUPYTERHUB_SERVICE_PREFIX"]
+    proxy_url_path = "proxy/%d" % port
+
+    user_url = urllib.parse.urljoin(base_url, service_url_path)
+    full_url = urllib.parse.urljoin(user_url, proxy_url_path)
+    return full_url
 
 
 def _get_word_wrap_formatter():
@@ -253,6 +282,11 @@ class ConversationPlot:
         # bokeh doesn't have 2-colour palettes, just use the 3-colour
         palette_n = max(n_colours, 3)
         return palettes.d3[palette_name][palette_n][:n_colours]
+
+    def show_on_binder(self, port: int = DEFAULT_BOKEH_PORT):
+        proxy_url = _get_remote_jupyter_proxy_url(port=port)
+        plot_func = self.create_plot_function()
+        show(plot_func, notebook_url=proxy_url, port=port)
 
     def show(self, **kwargs):
         """
