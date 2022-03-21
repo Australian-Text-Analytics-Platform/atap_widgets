@@ -283,10 +283,9 @@ class ConversationPlot:
         palette_n = max(n_colours, 3)
         return palettes.d3[palette_name][palette_n][:n_colours]
 
-    def show_on_binder(self, port: int = DEFAULT_BOKEH_PORT):
-        proxy_url = _get_remote_jupyter_proxy_url(port=port)
+    def show_on_binder(self):
         plot_func = self.create_plot_function()
-        show(plot_func, notebook_url=proxy_url, port=port)
+        show(plot_func, notebook_url=_get_remote_jupyter_proxy_url)
 
     def show(self, **kwargs):
         """
