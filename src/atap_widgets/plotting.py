@@ -254,14 +254,17 @@ class ConversationPlot:
         palette_n = max(n_colours, 3)
         return palettes.d3[palette_name][palette_n][:n_colours]
 
-    def show(self):
+    def show(self, **kwargs):
         """
         Show the interactive plot as a Jupyter notebook output.
         Requires bokeh.io.output_notebook() to have been run.
+
+        Args:
+           kwargs: additional arguments passed to bokeh.io.show()
         """
         plot_func = self.create_plot_function()
         try:
-            show(plot_func)
+            show(plot_func, **kwargs)
         except AssertionError:
             raise RuntimeError(
                 "No bokeh output detected. Make sure you run "
