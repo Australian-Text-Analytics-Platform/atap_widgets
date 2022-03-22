@@ -1,3 +1,4 @@
+import warnings
 from collections import defaultdict
 from itertools import combinations
 from typing import Dict
@@ -75,6 +76,24 @@ class Conversation:
         if id_column is None:
             id_column = "text_id"
             self.data["text_id"] = range(len(self.data))
+        if text_column != "text":
+            if "text" in self.data.columns:
+                warnings.warn(
+                    f"The data already contains a column called 'text', but we are "
+                    f"using '{text_column}' as the text_column. "
+                    f"'text' will be renamed to 'text_original'"
+                )
+                self.data = self.data.rename(columns={"text": "text_original"})
+            self.data = self.data.rename(columns={text_column: "text"})
+        if speaker_column != "speaker":
+            if "speaker" in self.data.columns:
+                warnings.warn(
+                    f"The data already contains a column called 'speaker', but we are "
+                    f"using '{speaker_column}' as the speaker_column. "
+                    f"'speaker' will be renamed to 'speaker_original'"
+                )
+                self.data = self.data.rename(columns={"speaker": "speaker_original"})
+            self.data = self.data.rename(columns={speaker_column: "speaker"})
         self.data = self.data.rename(
             columns={
                 text_column: "text",
