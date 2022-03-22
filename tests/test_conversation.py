@@ -67,6 +67,52 @@ def test_conversation(example_conversation_data):
     assert convo.n_speakers == 2
 
 
+def test_conversation_different_column_names(example_conversation_data):
+    """
+    Check we can create a Conversation object from a dataframe
+    with different column names for text and speaker.
+    """
+    data = example_conversation_data.copy()
+    data = data.rename(columns={"text": "utterance", "speaker": "current.name"})
+    assert "current.name" in data.columns
+    convo = Conversation(
+        data=data,
+        text_column="utterance",
+        speaker_column="current.name",
+        language_model="en_core_web_sm",
+    )
+    assert "text" in convo.data.columns
+    assert "speaker" in convo.data.columns
+    assert convo.n_speakers == 2
+    assert convo.get_speaker_names() == ["A", "B"]
+
+
+def test_conversation_clashing_names(example_conversation_data):
+    """
+    Check we can create a Conversation object from a dataframe
+    with different column names for text and speaker.
+    """
+    data = example_conversation_data.copy()
+    data = data.rename(columns={"text": "utterance"})
+    # Copy speaker column so we have both speaker and current.name
+    data["current.name"] = data["speaker"]
+    assert "current.name" in data.columns
+    assert "speaker" in data.columns
+    with pytest.warns(
+        UserWarning, match="we are using 'current.name' as the speaker_column"
+    ):
+        convo = Conversation(
+            data=data,
+            text_column="utterance",
+            speaker_column="current.name",
+            language_model="en_core_web_sm",
+        )
+    assert "text" in convo.data.columns
+    assert "speaker" in convo.data.columns
+    assert convo.n_speakers == 2
+    assert convo.get_speaker_names() == ["A", "B"]
+
+
 def test_get_sentence_windows(sherlock_holmes_doc):
     windows = list(
         ConceptSimilarityModel._get_sentence_windows(sherlock_holmes_doc, window_size=3)
