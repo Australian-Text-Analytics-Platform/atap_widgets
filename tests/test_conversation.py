@@ -264,7 +264,7 @@ def test_topic_recurrence_scores(
         similarity=example_similarity_scores,
         time_scale="short",
         direction="forward",
-        recurrence_type="self",
+        speaker="self",
     )
     assert sfs_scores["C"] == example_similarity_scores.loc["C", "E"]
     assert sfs_scores["B"] == example_similarity_scores.loc["B", "D"]
@@ -273,7 +273,7 @@ def test_topic_recurrence_scores(
         similarity=example_similarity_scores,
         time_scale="short",
         direction="forward",
-        recurrence_type="other",
+        speaker="other",
     )
     assert sfo_scores["C"] == example_similarity_scores.loc["C", "D"]
     assert sfo_scores["B"] == example_similarity_scores.loc["B", "C"]
@@ -282,7 +282,7 @@ def test_topic_recurrence_scores(
         similarity=example_similarity_scores,
         time_scale="medium",
         direction="forward",
-        recurrence_type="self",
+        speaker="self",
         t_medium=4,
     )
     assert mfs_scores["A"] == (
@@ -294,7 +294,7 @@ def test_topic_recurrence_scores(
         similarity=example_similarity_scores,
         time_scale="medium",
         direction="forward",
-        recurrence_type="other",
+        speaker="other",
         t_medium=4,
     )
     assert mfo_scores["B"] == (
@@ -306,7 +306,7 @@ def test_topic_recurrence_scores(
         similarity=example_similarity_scores,
         time_scale="long",
         direction="forward",
-        recurrence_type="self",
+        speaker="self",
     )
     assert lfs_scores["A"] == example_similarity_scores.loc["A", ["C", "E", "G"]].sum()
 
@@ -314,6 +314,6 @@ def test_topic_recurrence_scores(
         similarity=example_similarity_scores,
         time_scale="long",
         direction="forward",
-        recurrence_type="other",
+        speaker="other",
     )
     assert lfo_scores["A"] == example_similarity_scores.loc["A", ["B", "D", "F"]].sum()
