@@ -28,4 +28,8 @@ def _get_remote_jupyter_proxy_url(
 
 
 def _is_binder() -> bool:
+    """
+    Check if we are running in a Binder environment - this
+    may affect how we interact with libraries like bokeh
+    """
     return os.environ.get("BINDER_PORT") is not None

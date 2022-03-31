@@ -21,6 +21,53 @@ def example_conversation_data() -> pd.DataFrame:
 
 
 @pytest.fixture
+def example_similarity_scores() -> pd.DataFrame:
+    """
+    Dataframe with example document-document (or utterance-utterance)
+    similarity scores
+    """
+    df = pd.DataFrame(
+        {
+            "A": [1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4],
+            "B": [0.9, 1.0, 0.5, 0.4, 0.3, 0.2, 0.1],
+            "C": [0.8, 0.5, 1.0, 0.1, 0.2, 0.3, 0.4],
+            "D": [0.7, 0.4, 0.1, 1.0, 0.5, 0.6, 0.7],
+            "E": [0.6, 0.3, 0.2, 0.5, 1.0, 0.2, 0.4],
+            "F": [0.5, 0.2, 0.3, 0.6, 0.2, 1.0, 0.5],
+            "G": [0.4, 0.1, 0.4, 0.7, 0.4, 0.5, 1.0],
+        },
+        index=list("ABCDEFG"),
+    )
+    return df
+
+
+@pytest.fixture
+def example_similarity_conversation() -> Conversation:
+    """
+    Dummy conversation object to use with example_similarity_scores.
+    Text is not meaningful, it just matches the structure
+    required to work with the example_similarity_scores matrix
+    :return:
+    """
+    df = pd.DataFrame(
+        {
+            "text_id": list("ABCDEFG"),
+            "text": [
+                "Hello",
+                "Hi",
+                "How are you",
+                "I'm good",
+                "Good",
+                "Bye",
+                "Goodbye",
+            ],
+            "speaker": ["Alice", "Bob", "Alice", "Bob", "Alice", "Bob", "Alice"],
+        }
+    )
+    return Conversation(df, id_column="text_id", language_model="en_core_web_sm")
+
+
+@pytest.fixture
 def example_cooccurrence_counts() -> dict:
     """
     Example occurrence/cooccurrence with 5 items AB, AC, AD, BC, CD
@@ -199,3 +246,74 @@ def test_get_term_similarity_matrix(example_cooccurrence_counts):
     )
     # Should be (P(i, j) * P(not_i, not_j)) / (P(not_i, j) * P(i, not_j))
     assert term_similarity.loc["A", "B"] == ((1 / 5 * 1 / 5) / (1 / 5 * 2 / 5))
+
+
+def test_topic_recurrence_invalid_args(
+    example_similarity_scores, example_similarity_conversation
+):
+    with pytest.raises(ValueError, match="Invalid time_scale"):
+        example_similarity_conversation.get_topic_recurrence(
+            example_similarity_scores, "very short", "forward", "self"
+        )
+
+
+def test_topic_recurrence_scores(
+    example_similarity_scores, example_similarity_conversation
+):
+    sfs_scores = example_similarity_conversation.get_topic_recurrence(
+        similarity=example_similarity_scores,
+        time_scale="short",
+        direction="forward",
+        speaker="self",
+    )
+    assert sfs_scores["C"] == example_similarity_scores.loc["C", "E"]
+    assert sfs_scores["B"] == example_similarity_scores.loc["B", "D"]
+
+    sfo_scores = example_similarity_conversation.get_topic_recurrence(
+        similarity=example_similarity_scores,
+        time_scale="short",
+        direction="forward",
+        speaker="other",
+    )
+    assert sfo_scores["C"] == example_similarity_scores.loc["C", "D"]
+    assert sfo_scores["B"] == example_similarity_scores.loc["B", "C"]
+
+    mfs_scores = example_similarity_conversation.get_topic_recurrence(
+        similarity=example_similarity_scores,
+        time_scale="medium",
+        direction="forward",
+        speaker="self",
+        t_medium=4,
+    )
+    assert mfs_scores["A"] == (
+        example_similarity_scores.loc["A", "C"]
+        + example_similarity_scores.loc["A", "E"]
+    )
+
+    mfo_scores = example_similarity_conversation.get_topic_recurrence(
+        similarity=example_similarity_scores,
+        time_scale="medium",
+        direction="forward",
+        speaker="other",
+        t_medium=4,
+    )
+    assert mfo_scores["B"] == (
+        example_similarity_scores.loc["B", "C"]
+        + example_similarity_scores.loc["B", "E"]
+    )
+
+    lfs_scores = example_similarity_conversation.get_topic_recurrence(
+        similarity=example_similarity_scores,
+        time_scale="long",
+        direction="forward",
+        speaker="self",
+    )
+    assert lfs_scores["A"] == example_similarity_scores.loc["A", ["C", "E", "G"]].sum()
+
+    lfo_scores = example_similarity_conversation.get_topic_recurrence(
+        similarity=example_similarity_scores,
+        time_scale="long",
+        direction="forward",
+        speaker="other",
+    )
+    assert lfo_scores["A"] == example_similarity_scores.loc["A", ["B", "D", "F"]].sum()
