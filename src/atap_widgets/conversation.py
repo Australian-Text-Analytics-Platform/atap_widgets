@@ -110,9 +110,11 @@ class Conversation:
         self.data.set_index("text_id", drop=False, inplace=True)
         # Apply NLP
         if isinstance(language_model, str):
-            self.nlp = spacy.load(language_model, disable=["parser"]).add_pipe(
-                "sentencizer"
-            )
+            # We don't need full parsing by default, but do need sentence
+            #   segmentation, which is faster
+            self.nlp = spacy.load(language_model)
+            self.nlp.disable_pipe("parser")
+            self.nlp.enable_pipe("senter")
         else:
             self.nlp = language_model
         self.data["spacy_doc"] = self._create_spacy_docs()
