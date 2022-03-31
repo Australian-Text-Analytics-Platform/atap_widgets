@@ -317,3 +317,69 @@ def test_topic_recurrence_scores(
         speaker="other",
     )
     assert lfo_scores["A"] == example_similarity_scores.loc["A", ["B", "D", "F"]].sum()
+
+
+def test_topic_recurrence_scores_normalized(
+    example_similarity_scores, example_similarity_conversation
+):
+    sfs_scores = example_similarity_conversation.get_topic_recurrence(
+        similarity=example_similarity_scores,
+        time_scale="short",
+        direction="forward",
+        speaker="self",
+        normalize=True,
+    )
+    assert sfs_scores["C"] == example_similarity_scores.loc["C", "E"]
+    assert sfs_scores["B"] == example_similarity_scores.loc["B", "D"]
+
+    sfo_scores = example_similarity_conversation.get_topic_recurrence(
+        similarity=example_similarity_scores,
+        time_scale="short",
+        direction="forward",
+        speaker="other",
+        normalize=True,
+    )
+    assert sfo_scores["C"] == example_similarity_scores.loc["C", "D"]
+    assert sfo_scores["B"] == example_similarity_scores.loc["B", "C"]
+
+    mfs_scores = example_similarity_conversation.get_topic_recurrence(
+        similarity=example_similarity_scores,
+        time_scale="medium",
+        direction="forward",
+        speaker="self",
+        t_medium=4,
+        normalize=True,
+    )
+    assert mfs_scores["A"] == example_similarity_scores.loc["A", ["C", "E"]].sum() / 2
+
+    mfo_scores = example_similarity_conversation.get_topic_recurrence(
+        similarity=example_similarity_scores,
+        time_scale="medium",
+        direction="forward",
+        speaker="other",
+        t_medium=4,
+        normalize=True,
+    )
+    assert mfo_scores["B"] == example_similarity_scores.loc["B", ["C", "E"]].sum() / 2
+
+    lfs_scores = example_similarity_conversation.get_topic_recurrence(
+        similarity=example_similarity_scores,
+        time_scale="long",
+        direction="forward",
+        speaker="self",
+        normalize=True,
+    )
+    assert (
+        lfs_scores["A"] == example_similarity_scores.loc["A", ["C", "E", "G"]].sum() / 3
+    )
+
+    lfo_scores = example_similarity_conversation.get_topic_recurrence(
+        similarity=example_similarity_scores,
+        time_scale="long",
+        direction="forward",
+        speaker="other",
+        normalize=True,
+    )
+    assert (
+        lfo_scores["A"] == example_similarity_scores.loc["A", ["B", "D", "F"]].sum() / 3
+    )
