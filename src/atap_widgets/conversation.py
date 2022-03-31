@@ -362,7 +362,10 @@ class VectorSimilarityModel(BaseSimilarityModel):
 class ConceptSimilarityModel(BaseSimilarityModel):
     """
     Generate similarity scores from local co-occurrences,
-    using the algorithm from https://doi.org/10/b49pvx
+    using the algorithm from https://doi.org/10/b49pvx.
+
+    Also calculates topic recurrence statistics
+    as outlined in https://doi.org/10.1109/TASL.2012.2189566
     """
 
     def __init__(
