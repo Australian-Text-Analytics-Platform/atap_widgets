@@ -199,30 +199,45 @@ class Conversation:
         terms = self.get_term_frequencies(method=method)
         return terms["term"].iloc[:n].tolist()
 
+    @staticmethod
+    def _validate_args(name: str, value: str, options: Sequence[str]):
+        if value not in options:
+            raise ValueError(f"Invalid {name} '{value}': valid options are {options}")
+
     def get_topic_recurrence(
         self,
         similarity: pd.DataFrame,
         time_scale: Optional[Literal["short", "medium", "long"]] = None,
         direction: Optional[Literal["forward", "backward"]] = None,
         speaker: Optional[Literal["self", "other"]] = None,
+        normalize: bool = False,
         t_short: Union[Literal["n_speakers"], int] = "n_speakers",
         t_medium: int = 10,
     ) -> pd.Series:
-        valid_time_scales = ("short", "medium", "long")
-        valid_directions = ("forward", "backward")
-        valid_speakers = ("self", "other")
-        if time_scale not in valid_time_scales:
-            raise ValueError(
-                f"Invalid time_scale '{time_scale}': valid options are {valid_time_scales}"
-            )
-        if direction not in valid_directions:
-            raise ValueError(
-                f"Invalid direction '{direction}': valid options are {valid_directions}"
-            )
-        if speaker not in valid_speakers:
-            raise ValueError(
-                f"Invalid speaker '{speaker}': valid options are {valid_speakers}"
-            )
+        """
+        Calculate topic recurrence metrics like short-forward-self.
+
+        Args:
+            similarity: Utterance-utterance similarity matrix, e.g.
+                from ConceptSimilarityModel
+            time_scale: "short", "medium" or "long.
+                How far to look from the current utterance.
+            direction: "forward" or "backward".
+                Which direction to look from the current utterance
+            speaker: "self" or "other"
+                Whether to look at recurrence in utterances from
+                the same speaker, or other speaker(s)
+            normalize: Should the recurrence metric be normalized
+                by dividing by the number of relevant utterances?
+            t_short: How far to look for the "short" time_scale.
+                By default this is the number of speakers in the
+                conversation.
+            t_medium: How far to look for the "medium" time_scale
+        """
+        self._validate_args("time_scale", time_scale, ("short", "medium", "long"))
+        self._validate_args("direction", direction, ("forward", "backward"))
+        self._validate_args("speaker", speaker, ("self", "other"))
+
         speakers = self.data["speaker"]
         # Default for t_short is number of speakers
         if t_short == "n_speakers":
@@ -248,6 +263,9 @@ class Conversation:
             elif speaker == "other":
                 speaker_indicator = speaker_vec != current_speaker
             score = (speaker_indicator * similarity_vec).sum()
+            if normalize:
+                normalization_factor = speaker_indicator.sum()
+                score = score / normalization_factor
             recurrence[text_id] = score
 
         return recurrence
