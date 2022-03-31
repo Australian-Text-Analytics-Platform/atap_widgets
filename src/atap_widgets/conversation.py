@@ -3,8 +3,10 @@ from collections import defaultdict
 from itertools import combinations
 from typing import Dict
 from typing import List
+from typing import Literal
 from typing import Optional
 from typing import Sequence
+from typing import Union
 
 import numpy as np
 import pandas as pd
@@ -192,6 +194,59 @@ class Conversation:
         """
         terms = self.get_term_frequencies(method=method)
         return terms["term"].iloc[:n].tolist()
+
+    def get_topic_recurrence(
+        self,
+        similarity: pd.DataFrame,
+        time_scale: Optional[Literal["short", "medium", "long"]] = None,
+        direction: Optional[Literal["forward", "backward"]] = None,
+        speaker: Optional[Literal["self", "other"]] = None,
+        t_short: Union[Literal["n_speakers"], int] = "n_speakers",
+        t_medium: int = 10,
+    ) -> pd.Series:
+        valid_time_scales = ("short", "medium", "long")
+        valid_directions = ("forward", "backward")
+        valid_speakers = ("self", "other")
+        if time_scale not in valid_time_scales:
+            raise ValueError(
+                f"Invalid time_scale '{time_scale}': valid options are {valid_time_scales}"
+            )
+        if direction not in valid_directions:
+            raise ValueError(
+                f"Invalid direction '{direction}': valid options are {valid_directions}"
+            )
+        if speaker not in valid_speakers:
+            raise ValueError(
+                f"Invalid speaker '{speaker}': valid options are {valid_speakers}"
+            )
+        speakers = self.data["speaker"]
+        # Default for t_short is number of speakers
+        if t_short == "n_speakers":
+            t_short = self.n_speakers
+
+        range_lookup = {"short": t_short, "medium": t_medium, "long": len(speakers)}
+        recurrence_range = range_lookup[time_scale]
+
+        recurrence = pd.Series(pd.NA, index=speakers.index, dtype=pd.Float64Dtype)
+        for text_id in recurrence.index:
+            current_speaker = speakers[text_id]
+            index = speakers.index.get_loc(text_id)
+            if direction == "forward":
+                range_start = index + 1
+                range_end = range_start + recurrence_range
+            elif direction == "backward":
+                range_start = index - recurrence_range
+                range_end = range_start + recurrence_range
+            similarity_vec = similarity.iloc[range_start:range_end, index]
+            speaker_vec = speakers.iloc[range_start:range_end]
+            if speaker == "self":
+                speaker_indicator = speaker_vec == current_speaker
+            elif speaker == "other":
+                speaker_indicator = speaker_vec != current_speaker
+            score = (speaker_indicator * similarity_vec).sum()
+            recurrence[text_id] = score
+
+        return recurrence
 
 
 class BaseSimilarityModel:
