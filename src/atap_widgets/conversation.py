@@ -61,6 +61,10 @@ class Conversation:
         id_column: An optional column name with a unique ID for
             each turn. If not provided, a default "text_id" column
             will be created.
+        language_model: A spacy language model. Either a string giving
+           the name of an installed model, or you can pass a model
+           instance that you've already loaded and configured.
+           When passing a string, we disable the parser by default.
     """
 
     def __init__(
@@ -103,7 +107,10 @@ class Conversation:
         )
         self.data.set_index("text_id", drop=False, inplace=True)
         # Apply NLP
-        self.nlp = spacy.load(language_model)
+        if isinstance(language_model, str):
+            self.nlp = spacy.load(language_model, disable=["parser"])
+        else:
+            self.nlp = language_model
         self.data["spacy_doc"] = self._create_spacy_docs()
 
     def __str__(self):
