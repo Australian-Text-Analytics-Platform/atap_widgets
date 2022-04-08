@@ -518,6 +518,12 @@ class ConceptSimilarityModel(BaseSimilarityModel):
         contingency_probs: Dict[Tuple[str, str], pd.DataFrame] = {
             k: v / total_windows for k, v in contingency_counts.items()
         }
+        numerator = (
+            contingency_probs[("i", "j")] * contingency_probs[("not_i", "not_j")]
+        )
+        denominator = (
+            contingency_probs[("not_i", "j")] * contingency_probs[("i", "not_j")]
+        )
         if self._zero_correction_method == "ones":
             # Fixes for zero counts/terms only appearing in one context
             contingency_probs[("i", "not_j")] = contingency_probs[("i", "not_j")].where(
@@ -527,12 +533,9 @@ class ConceptSimilarityModel(BaseSimilarityModel):
                 ~cooccurrence.eq(occurrence, axis="columns"), 1
             )
         elif self._zero_correction_method == "small":
-            for v in contingency_probs.values():
-                v.where(v == 0, 0.00001, inplace=True)
+            denominator.where(denominator == 0, 0.00001, inplace=True)
 
-        similarity_matrix = (
-            contingency_probs[("i", "j")] * contingency_probs[("not_i", "not_j")]
-        ) / (contingency_probs[("not_i", "j")] * contingency_probs[("i", "not_j")])
+        similarity_matrix = numerator / denominator
         return similarity_matrix
 
     def get_concept_vectors(self, term_similarity_matrix: pd.DataFrame) -> pd.DataFrame:
