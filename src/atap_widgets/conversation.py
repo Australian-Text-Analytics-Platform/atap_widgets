@@ -527,7 +527,7 @@ class ConceptSimilarityModel(BaseSimilarityModel):
             )
         elif self._zero_correction_method == "small":
             for v in contingency_probs.values():
-                v.loc[v == 0] = 0.0001
+                v[v == 0] = 0.0001
 
         similarity_matrix = (
             contingency_probs[("i", "j")] * contingency_probs[("not_i", "not_j")]
