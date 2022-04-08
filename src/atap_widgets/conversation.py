@@ -6,6 +6,7 @@ from typing import List
 from typing import Literal
 from typing import Optional
 from typing import Sequence
+from typing import Tuple
 from typing import Union
 
 import numpy as np
@@ -514,7 +515,7 @@ class ConceptSimilarityModel(BaseSimilarityModel):
             cooccurrence=cooccurrence,
         )
         # Convert to probabilities
-        contingency_probs = {
+        contingency_probs: Dict[Tuple[str, str], pd.DataFrame] = {
             k: v / total_windows for k, v in contingency_counts.items()
         }
         if self._zero_correction_method == "ones":
@@ -527,7 +528,7 @@ class ConceptSimilarityModel(BaseSimilarityModel):
             )
         elif self._zero_correction_method == "small":
             for v in contingency_probs.values():
-                v[v == 0] = 0.0001
+                v.where(v == 0, 0.00001, inplace=True)
 
         similarity_matrix = (
             contingency_probs[("i", "j")] * contingency_probs[("not_i", "not_j")]
