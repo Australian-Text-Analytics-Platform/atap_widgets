@@ -397,13 +397,11 @@ class ConceptSimilarityModel(BaseSimilarityModel):
         n_top_terms: int = 20,
         top_terms: Optional[Sequence[str]] = None,
         sentence_window_size: int = 3,
-        _zero_correction_method: str = "ones",
     ):
         super().__init__(
             conversation=conversation, n_top_terms=n_top_terms, top_terms=top_terms
         )
         self.sentence_window_size = sentence_window_size
-        self._zero_correction_method = _zero_correction_method
 
     @staticmethod
     def _get_sentence_windows(doc: spacy.tokens.Doc, window_size: int):
@@ -500,8 +498,12 @@ class ConceptSimilarityModel(BaseSimilarityModel):
             ("not_i", "j"): (-1 * cooccurrence).add(occurrence, axis="columns"),
         }
 
+    @classmethod
     def get_term_similarity_matrix(
-        self, total_windows: int, occurrence: pd.Series, cooccurrence: pd.DataFrame
+        cls,
+        total_windows: int,
+        occurrence: pd.Series,
+        cooccurrence: pd.DataFrame,
     ) -> pd.DataFrame:
         """
         Calculate the similarity score S(t_i, t_j) between each pair of terms t_i.
@@ -509,7 +511,7 @@ class ConceptSimilarityModel(BaseSimilarityModel):
         See Angus (2012): https://doi.org/10/b49pvx
         for details of how to calculate these scores.
         """
-        contingency_counts = self._get_contingency_counts(
+        contingency_counts = cls._get_contingency_counts(
             total_windows=total_windows,
             occurrence=occurrence,
             cooccurrence=cooccurrence,
@@ -518,24 +520,20 @@ class ConceptSimilarityModel(BaseSimilarityModel):
         contingency_probs: Dict[Tuple[str, str], pd.DataFrame] = {
             k: v / total_windows for k, v in contingency_counts.items()
         }
+
         numerator = (
             contingency_probs[("i", "j")] * contingency_probs[("not_i", "not_j")]
         )
         denominator = (
             contingency_probs[("not_i", "j")] * contingency_probs[("i", "not_j")]
         )
-        if self._zero_correction_method == "ones":
-            # Fixes for zero counts/terms only appearing in one context
-            contingency_probs[("i", "not_j")] = contingency_probs[("i", "not_j")].where(
-                ~cooccurrence.eq(occurrence, axis="rows"), 1
-            )
-            contingency_probs[("not_i", "j")] = contingency_probs[("not_i", "j")].where(
-                ~cooccurrence.eq(occurrence, axis="columns"), 1
-            )
-        elif self._zero_correction_method == "small":
-            denominator.where(denominator == 0, 0.00001, inplace=True)
 
         similarity_matrix = numerator / denominator
+        # NOTE: in order to divide invalid infinite values, we substitute
+        #  0.5 as the similarity value for values > 1. This occurs when
+        #  a term only occurs in a single context, such that the denominator
+        #  is zero
+        similarity_matrix = similarity_matrix.where(similarity_matrix <= 1, 0.5)
         return similarity_matrix
 
     def get_concept_vectors(self, term_similarity_matrix: pd.DataFrame) -> pd.DataFrame:
