@@ -194,7 +194,7 @@ def test_get_sentence_windows_short_doc(basic_spacy_nlp):
 
 def test_cooccurrence_counts(sherlock_holmes_dummy_conversation):
     concept_model = ConceptSimilarityModel(
-        sherlock_holmes_dummy_conversation, n_top_terms=5, sentence_window_size=3
+        sherlock_holmes_dummy_conversation, key_terms=5, sentence_window_size=3
     )
     counts = concept_model.get_cooccurrence_counts()
     cooccurrence = counts["cooccurrence"]
