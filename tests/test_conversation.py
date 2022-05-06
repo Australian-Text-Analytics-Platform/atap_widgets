@@ -194,7 +194,7 @@ def test_get_sentence_windows_short_doc(basic_spacy_nlp):
 
 def test_cooccurrence_counts(sherlock_holmes_dummy_conversation):
     concept_model = ConceptSimilarityModel(
-        sherlock_holmes_dummy_conversation, n_top_terms=5, sentence_window_size=3
+        sherlock_holmes_dummy_conversation, key_terms=5, sentence_window_size=3
     )
     counts = concept_model.get_cooccurrence_counts()
     cooccurrence = counts["cooccurrence"]
@@ -383,3 +383,59 @@ def test_topic_recurrence_scores_normalized(
     assert (
         lfo_scores["A"] == example_similarity_scores.loc["A", ["B", "D", "F"]].sum() / 3
     )
+
+
+@pytest.fixture
+def example_grouped_recurrence_conversation():
+    data = pd.DataFrame(
+        {
+            "text_id": [1, 2, 3, 4, 5, 6],
+            "speaker": ["a", "b", "c", "b", "a", "c"],
+            "group": ["G1", "G1", "G2", "G1", "G1", "G2"],
+            # Don't need actual text values for this
+            "text": ["dummy"] * 6,
+        }
+    )
+    return Conversation(data, id_column="text_id")
+
+
+@pytest.fixture
+def example_grouped_recurrence_similarity():
+    df = pd.DataFrame(
+        {
+            1: [1.0, 0.9, 0.8, 0.7, 0.6, 0.5],
+            2: [0.9, 1.0, 0.5, 0.4, 0.3, 0.2],
+            3: [0.8, 0.5, 1.0, 0.1, 0.2, 0.3],
+            4: [0.7, 0.4, 0.1, 1.0, 0.5, 0.6],
+            5: [0.6, 0.3, 0.2, 0.5, 1.0, 0.2],
+            6: [0.5, 0.2, 0.3, 0.6, 0.2, 1.0],
+        },
+        index=[1, 2, 3, 4, 5, 6],
+    )
+    return df
+
+
+def test_grouped_recurrence(
+    example_grouped_recurrence_conversation, example_grouped_recurrence_similarity
+):
+    conversation = example_grouped_recurrence_conversation
+    similarity = example_grouped_recurrence_similarity
+
+    person_to_person = conversation.get_grouped_recurrence(
+        similarity, grouping_column="speaker"
+    )
+    assert person_to_person.loc["a", "c"] == (0.8 + 0.5 + 0.2) * 3
+    # These scores are non-symmetrical, they only include
+    #   cells where the second group speaks after the first group
+    assert person_to_person.loc["c", "a"] == (0.2) * 1
+
+    group_to_group = conversation.get_grouped_recurrence(
+        similarity, grouping_column="group"
+    )
+    # For this, for each G1 turn, we need to find all the G2
+    #   turns that come after it
+    g1_g2_scores = [0.8 + 0.5, 0.5 + 0.2, 0.6, 0.2]
+    assert group_to_group.loc["G1", "G2"] == pytest.approx(sum(g1_g2_scores) * 6)
+    # There's only one G2 turn with G1 turns after it
+    g2_g1_scores = [0.1 + 0.2]
+    assert group_to_group.loc["G2", "G1"] == pytest.approx(sum(g2_g1_scores) * 2)

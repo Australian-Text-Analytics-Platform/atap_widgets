@@ -1,6 +1,7 @@
 import warnings
 from collections import defaultdict
 from itertools import combinations
+from itertools import permutations
 from typing import Dict
 from typing import List
 from typing import Literal
@@ -20,6 +21,8 @@ from sentence_transformers import SentenceTransformer
 from sklearn.metrics import pairwise
 from textacy.representations import matrix_utils
 from textacy.representations.vectorizers import Vectorizer
+
+KeyTerms = Union[Literal["all"], int, Sequence[str]]
 
 
 def vector_cosine_similarity(docs: Sequence[spacy.tokens.Doc]) -> np.ndarray:
@@ -189,6 +192,16 @@ class Conversation:
         term_df.sort_values("frequency", ascending=False, inplace=True)
         return term_df
 
+    def get_all_terms(self) -> List[str]:
+        corpus = self.create_corpus()
+        vectorizer = Vectorizer(
+            tf_type="binary",
+            idf_type=None,
+            dl_type=None,
+        )
+        vectorizer.fit_transform(filter_corpus(corpus))
+        return vectorizer.terms_list
+
     def get_most_common_terms(self, n: int = 10, method: str = "overall") -> List[str]:
         """
         Get the n most common terms
@@ -271,6 +284,48 @@ class Conversation:
 
         return recurrence
 
+    def get_grouped_recurrence(
+        self, similarity: pd.DataFrame, grouping_column: str = "speaker"
+    ) -> pd.DataFrame:
+        """Calculate overall recurrence between groups, e.g. person-to-person
+        or group-to-group.
+
+        See https://doi.org/10.1063/1.5024809
+
+        Args:
+            similarity: matrix of turn-turn similarity scores for the conversation,
+               e.g. from
+        """
+        groups = self.data[grouping_column].unique()
+        # Group for each text/turn in the conversation
+        current_group = self.data[grouping_column]
+
+        recurrence = pd.DataFrame(
+            pd.NA, index=groups, columns=groups, dtype=pd.Float64Dtype
+        )
+        # Get the upper triangle of the similarity matrix, we want to sum
+        # across cells (i, j) where i < j
+        in_upper_triangle = pd.DataFrame(
+            np.triu(np.ones_like(similarity, dtype=bool), k=1),
+            index=similarity.index,
+            columns=similarity.index,
+        )
+        similarity_upper = pd.DataFrame(
+            np.triu(similarity, k=1), index=similarity.index, columns=similarity.columns
+        )
+
+        pairs = permutations(groups, 2)
+        for group_a, group_b in pairs:
+            scores = similarity_upper.loc[
+                current_group == group_a, current_group == group_b
+            ]
+            # Number of cells eligible to contribute is the total number with
+            #   group_i = a, group_j = b, and in the upper triangle where i < j
+            n_cells = in_upper_triangle.loc[scores.index, scores.columns].sum().sum()
+            recurrence.loc[group_a, group_b] = n_cells * scores.values.sum()
+
+        return recurrence
+
 
 class BaseSimilarityModel:
     """Common code for similarity models, handles creation of corpus etc."""
@@ -278,9 +333,7 @@ class BaseSimilarityModel:
     def __init__(
         self,
         conversation: Conversation,
-        n_top_terms: int = 20,
-        top_terms: Optional[Sequence[str]] = None,
-        **kwargs,
+        key_terms: KeyTerms = 20,
     ):
         self.conversation = conversation
         self.corpus = self.conversation.create_corpus()
@@ -294,14 +347,18 @@ class BaseSimilarityModel:
             filter_corpus(self.corpus)
         )
 
-        if top_terms is None:
+        if key_terms == "all":
+            self.key_terms = self.binary_vectorizer.terms_list
+        elif isinstance(key_terms, int):
             # Get top terms based on number of documents they appear in
-            self.top_terms = self.conversation.get_most_common_terms(
-                n=n_top_terms, method="n_turns"
+            self.key_terms = self.conversation.get_most_common_terms(
+                n=key_terms, method="n_turns"
             )
-        else:
+        elif isinstance(key_terms, list):
             # Use the user-specified terms list
-            self.top_terms = top_terms
+            self.key_terms = key_terms
+        else:
+            raise ValueError(f"Unrecognized type for key_terms: {type(key_terms)}")
 
     @staticmethod
     def _filter_tokens(doc: spacy.tokens.Doc):
@@ -326,14 +383,10 @@ class VectorSimilarityModel(BaseSimilarityModel):
     we use the word vectors from a spacy language model.
     """
 
-    def __init__(
-        self,
-        conversation: Conversation,
-        n_top_terms: int = 20,
-        top_terms: Optional[Sequence[str]] = None,
-    ):
+    def __init__(self, conversation: Conversation, key_terms: KeyTerms = 20):
         super().__init__(
-            conversation=conversation, n_top_terms=n_top_terms, top_terms=top_terms
+            conversation=conversation,
+            key_terms=key_terms,
         )
 
     def get_term_similarity_matrix(self) -> pd.DataFrame:
@@ -369,7 +422,7 @@ class VectorSimilarityModel(BaseSimilarityModel):
             columns=self.conversation.data["text_id"],
         )
         term_similarity_matrix = self.get_term_similarity_matrix()
-        key_term_similarity = term_similarity_matrix.loc[self.top_terms, :]
+        key_term_similarity = term_similarity_matrix.loc[self.key_terms, :]
         return key_term_similarity @ term_doc_df
 
     def get_conversation_similarity(self) -> pd.DataFrame:
@@ -389,18 +442,27 @@ class ConceptSimilarityModel(BaseSimilarityModel):
 
     Also calculates topic recurrence statistics
     as outlined in https://doi.org/10.1109/TASL.2012.2189566
+
+    Args:
+        conversation: a Conversation object
+        key_terms: By default, we use the 20 terms that occur in the most
+            documents. You can pass a different number (as an integer) to
+            use a different number of top terms.
+            You can also set key_terms="all" to use all
+            terms in the data, or manually pass a list of terms to use as
+            strings.
+        sentence_window_size: Number of consecutive sentences to look at
+            when counting co-occurrence. Terms will be treated as co-occurring
+            if they occur in the same window (within a turn).
     """
 
     def __init__(
         self,
         conversation: Conversation,
-        n_top_terms: int = 20,
-        top_terms: Optional[Sequence[str]] = None,
+        key_terms: KeyTerms = 20,
         sentence_window_size: int = 3,
     ):
-        super().__init__(
-            conversation=conversation, n_top_terms=n_top_terms, top_terms=top_terms
-        )
+        super().__init__(conversation=conversation, key_terms=key_terms)
         self.sentence_window_size = sentence_window_size
 
     @staticmethod
