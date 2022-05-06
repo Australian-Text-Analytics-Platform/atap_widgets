@@ -2,6 +2,7 @@ import warnings
 from collections import defaultdict
 from itertools import combinations
 from itertools import permutations
+from itertools import product
 from typing import Dict
 from typing import List
 from typing import Literal
@@ -23,6 +24,10 @@ from textacy.representations import matrix_utils
 from textacy.representations.vectorizers import Vectorizer
 
 KeyTerms = Union[Literal["all"], int, Sequence[str]]
+# Valid options for Conversation.get_topic_recurrence()
+_TIME_SCALES = ("short", "medium", "long")
+_DIRECTIONS = ("forward", "backward")
+_SPEAKERS = ("self", "other")
 
 
 def vector_cosine_similarity(docs: Sequence[spacy.tokens.Doc]) -> np.ndarray:
@@ -218,6 +223,39 @@ class Conversation:
         if value not in options:
             raise ValueError(f"Invalid {name} '{value}': valid options are {options}")
 
+    def get_all_topic_recurrences(
+        self,
+        similarity: pd.DataFrame,
+        normalize: bool = False,
+        t_short: Union[Literal["n_speakers"], int] = "n_speakers",
+        t_medium: int = 10,
+    ) -> pd.DataFrame:
+        recurrence_types = product(_TIME_SCALES, _DIRECTIONS, _SPEAKERS)
+        results = []
+        for time_scale, direction, speaker in recurrence_types:
+            recurrence = self.get_topic_recurrence(
+                similarity=similarity,
+                time_scale=time_scale,
+                direction=direction,
+                speaker=speaker,
+                normalize=normalize,
+                t_short=t_short,
+                t_medium=t_medium,
+            )
+            record = {
+                "time_scale": time_scale,
+                "direction": direction,
+                "speaker": speaker,
+                "text_id": recurrence.index.tolist(),
+                "score": recurrence,
+            }
+            results.append(record)
+
+        results_df = pd.DataFrame.from_records(results).explode(
+            ["text_id", "score"], ignore_index=True
+        )
+        return results_df
+
     def get_topic_recurrence(
         self,
         similarity: pd.DataFrame,
@@ -248,9 +286,9 @@ class Conversation:
                 conversation.
             t_medium: How far to look for the "medium" time_scale
         """
-        self._validate_args("time_scale", time_scale, ("short", "medium", "long"))
-        self._validate_args("direction", direction, ("forward", "backward"))
-        self._validate_args("speaker", speaker, ("self", "other"))
+        self._validate_args("time_scale", time_scale, _TIME_SCALES)
+        self._validate_args("direction", direction, _DIRECTIONS)
+        self._validate_args("speaker", speaker, _SPEAKERS)
 
         speakers = self.data["speaker"]
         # Default for t_short is number of speakers
