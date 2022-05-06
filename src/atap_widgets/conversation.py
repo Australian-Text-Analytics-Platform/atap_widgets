@@ -1,6 +1,7 @@
 import warnings
 from collections import defaultdict
 from itertools import combinations
+from itertools import permutations
 from typing import Dict
 from typing import List
 from typing import Literal
@@ -280,6 +281,48 @@ class Conversation:
                 normalization_factor = speaker_indicator.sum()
                 score = score / normalization_factor
             recurrence[text_id] = score
+
+        return recurrence
+
+    def get_grouped_recurrence(
+        self, similarity: pd.DataFrame, grouping_column: str = "speaker"
+    ) -> pd.DataFrame:
+        """Calculate overall recurrence between groups, e.g. person-to-person
+        or group-to-group.
+
+        See https://doi.org/10.1063/1.5024809
+
+        Args:
+            similarity: matrix of turn-turn similarity scores for the conversation,
+               e.g. from
+        """
+        groups = self.data[grouping_column].unique()
+        # Group for each text/turn in the conversation
+        current_group = self.data[grouping_column]
+
+        recurrence = pd.DataFrame(
+            pd.NA, index=groups, columns=groups, dtype=pd.Float64Dtype
+        )
+        # Get the upper triangle of the similarity matrix, we want to sum
+        # across cells (i, j) where i < j
+        in_upper_triangle = pd.DataFrame(
+            np.triu(np.ones_like(similarity, dtype=bool), k=1),
+            index=similarity.index,
+            columns=similarity.index,
+        )
+        similarity_upper = pd.DataFrame(
+            np.triu(similarity, k=1), index=similarity.index, columns=similarity.columns
+        )
+
+        pairs = permutations(groups, 2)
+        for group_a, group_b in pairs:
+            scores = similarity_upper.loc[
+                current_group == group_a, current_group == group_b
+            ]
+            # Number of cells eligible to contribute is the total number with
+            #   group_i = a, group_j = b, and in the upper triangle where i < j
+            n_cells = in_upper_triangle.loc[scores.index, scores.columns].sum().sum()
+            recurrence.loc[group_a, group_b] = n_cells * scores.values.sum()
 
         return recurrence
 
