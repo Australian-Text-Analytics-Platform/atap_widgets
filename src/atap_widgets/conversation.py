@@ -1,5 +1,4 @@
 import warnings
-from collections import defaultdict
 from itertools import combinations
 from itertools import permutations
 from itertools import product
@@ -528,8 +527,22 @@ class ConceptSimilarityModel(BaseSimilarityModel):
             "cooccurrence": DataFrame of term-term cooccurrence counts,
             "total_windows":
         """
-        pair_counts = defaultdict(int)
-        occurrence_counts = defaultdict(int)
+        # vectorizer.terms_list is a property that's recomputed on access,
+        #   pull it out so we only access it once
+        all_terms = self.binary_vectorizer.terms_list
+        # Create series and dataframe to store occurrence counts
+        #   and cooccurrence counts
+        occurrence_series = pd.Series(
+            0,
+            index=all_terms,
+            dtype=pd.Int64Dtype(),
+        )
+        cooccurrence_matrix = pd.DataFrame(
+            0,
+            index=all_terms,
+            columns=all_terms,
+            dtype=pd.Int64Dtype(),
+        )
 
         total_windows = 0
         for doc in self.corpus:
@@ -543,28 +556,12 @@ class ConceptSimilarityModel(BaseSimilarityModel):
                     concat(self._filter_tokens(sentence) for sentence in window)
                 )
                 for token in current_tokens:
-                    occurrence_counts[token] += 1
+                    occurrence_series.at[token] += 1
 
-                pairs = combinations(sorted(current_tokens), 2)
-                for pair in pairs:
-                    pair_counts[pair] += 1
-
-        # Create series and dataframe to store occurrence counts
-        #   and cooccurrence counts
-        occurrence_series = pd.Series(
-            occurrence_counts,
-            index=self.binary_vectorizer.terms_list,
-            dtype=pd.Int64Dtype(),
-        )
-        cooccurrence_matrix = pd.DataFrame(
-            0,
-            index=self.binary_vectorizer.terms_list,
-            columns=self.binary_vectorizer.terms_list,
-            dtype=pd.Int64Dtype(),
-        )
-        for (term1, term2), count in pair_counts.items():
-            cooccurrence_matrix.loc[term1, term2] = count
-            cooccurrence_matrix.loc[term2, term1] = count
+                pairs = combinations(current_tokens, 2)
+                for term1, term2 in pairs:
+                    cooccurrence_matrix.at[term1, term2] += 1
+                    cooccurrence_matrix.at[term2, term1] += 1
 
         return {
             "occurrence": occurrence_series,
