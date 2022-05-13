@@ -185,11 +185,13 @@ class ConversationPlot:
         """
         if similarity_matrix is None:
             similarity_matrix = pd.DataFrame(conversation.vector_similarity_matrix())
+        in_current_plot = conversation.data["text_id"].isin(similarity_matrix.index)
+        current_data = conversation.data.loc[in_current_plot, :]
         # Info about each text, for merging with similarity data
         text_info = pd.DataFrame(
             {
-                "n_words": conversation.data["spacy_doc"].map(len),
-                "speaker": conversation.data["speaker"],
+                "n_words": current_data["spacy_doc"].map(len),
+                "speaker": current_data["speaker"],
             }
         )
         # Log-scale number of words for rectangle sizes
