@@ -385,6 +385,33 @@ def test_topic_recurrence_scores_normalized(
     )
 
 
+def test_all_topic_recurrences(
+    example_similarity_scores, example_similarity_conversation
+):
+    similarity = example_similarity_scores
+    all_scores = example_similarity_conversation.get_all_topic_recurrences(similarity)
+
+    # Check we get the same results in the all_scores df as when we get
+    #   individual scores
+    sfs_scores = example_similarity_conversation.get_topic_recurrence(
+        similarity, time_scale="short", direction="forward", speaker="self"
+    )
+    sfs_from_df = all_scores.query(
+        "time_scale == 'short' & direction == 'forward' & speaker == 'self'"
+    )
+    sfs_series = pd.Series(sfs_from_df["score"].tolist(), index=sfs_from_df["text_id"])
+    assert (sfs_series == sfs_scores).all()
+
+    lfo_scores = example_similarity_conversation.get_topic_recurrence(
+        similarity, time_scale="long", direction="backward", speaker="other"
+    )
+    lfo_from_df = all_scores.query(
+        "time_scale == 'long' & direction == 'backward' & speaker == 'other'"
+    )
+    lfo_series = pd.Series(lfo_from_df["score"].tolist(), index=lfo_from_df["text_id"])
+    assert (lfo_series == lfo_scores).all()
+
+
 @pytest.fixture
 def example_grouped_recurrence_conversation():
     data = pd.DataFrame(
