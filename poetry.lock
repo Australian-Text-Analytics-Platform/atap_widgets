@@ -868,7 +868,7 @@ test = ["coverage", "ipykernel", "pre-commit", "pytest-console-scripts", "pytest
 
 [[package]]
 name = "jupyterlab"
-version = "3.4.0"
+version = "3.4.2"
 description = "JupyterLab computational environment"
 category = "dev"
 optional = false
@@ -2941,8 +2941,8 @@ jupyter-server = [
     {file = "jupyter_server-1.17.0.tar.gz", hash = "sha256:7b3aa524790ab0da64f06dfe0b2af149d0a3f59aad71fdedcf1d8bae6508018c"},
 ]
 jupyterlab = [
-    {file = "jupyterlab-3.4.0-py3-none-any.whl", hash = "sha256:a50e5f400652def16d8a7edf10dfab177c03cf20427678fac09922de1055cf58"},
-    {file = "jupyterlab-3.4.0.tar.gz", hash = "sha256:0b504cef99c5eeb4058e554aa90733370d2b4b1ba5a275e267a5a144f43daa55"},
+    {file = "jupyterlab-3.4.2-py3-none-any.whl", hash = "sha256:f749fff221e12fe384dd91e6f8c004e6a59cd3bf4271208002ab02cb4218618c"},
+    {file = "jupyterlab-3.4.2.tar.gz", hash = "sha256:38abd3a4f83a8f97e3f15bebbcc0825903c15519809eedfaa41340d260be2160"},
 ]
 jupyterlab-pygments = [
     {file = "jupyterlab_pygments-0.2.2-py2.py3-none-any.whl", hash = "sha256:2405800db07c9f770863bcf8049a529c3dd4d3e28536638bd7c1c01d2748309f"},
