@@ -650,7 +650,7 @@ class ConceptSimilarityModel(BaseSimilarityModel):
             index=self.binary_vectorizer.terms_list,
             columns=self.conversation.data["text_id"],
         )
-        key_term_similarity = term_similarity_matrix.loc[self.top_terms, :]
+        key_term_similarity = term_similarity_matrix.loc[self.key_terms, :]
         return key_term_similarity @ term_doc_df
 
     def get_conversation_similarity(self):
@@ -674,7 +674,7 @@ class ConceptSimilarityModel(BaseSimilarityModel):
         )
 
     def get_term_overlaps(self, doc1, doc2):
-        top_term_doc_df = self._term_doc_df.loc[self.top_terms, :]
+        top_term_doc_df = self._term_doc_df.loc[self.key_terms, :]
         term_vector1 = top_term_doc_df.loc[:, doc1]
         term_vector2 = top_term_doc_df.loc[:, doc2]
         return term_vector1.dot(term_vector2)
