@@ -112,6 +112,7 @@ def test_conversation(example_conversation_data):
     # Test ID column was automatically created
     assert (convo.data["text_id"] == [0, 1, 2, 3]).all()
     assert convo.n_speakers == 2
+    assert convo.n_utterances == 4
 
 
 def test_conversation_different_column_names(example_conversation_data):
