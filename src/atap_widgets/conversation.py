@@ -83,7 +83,7 @@ class Conversation:
         text_column: str = "text",
         speaker_column: str = "speaker",
         id_column: Optional[str] = None,
-        language_model: str = "en_core_web_sm",
+        language_model: Union[str, spacy.Language] = "en_core_web_sm",
     ):
         # Set up data
         self.data = data.copy()
@@ -120,15 +120,25 @@ class Conversation:
         if isinstance(language_model, str):
             # We don't need full parsing by default, but do need sentence
             #   segmentation, which is faster
-            self.nlp = spacy.load(language_model)
+            self.nlp: spacy.Language = spacy.load(language_model)
             self.nlp.disable_pipe("parser")
             self.nlp.enable_pipe("senter")
-        else:
+        elif isinstance(language_model, spacy.Language):
             self.nlp = language_model
         self.data["spacy_doc"] = self._create_spacy_docs()
 
+    def __repr__(self):
+        if "name" in self.nlp.meta:
+            model_name = self.nlp.meta["name"]
+        else:
+            model_name = "custom"
+        return (
+            f"Conversation({self.n_utterances} utterances, "
+            + f"{self.n_speakers} speakers, language_model='{model_name}')"
+        )
+
     def __str__(self):
-        return "Conversation object:\n" + str(self.data.head())
+        return repr(self)
 
     def _create_spacy_docs(self) -> pd.Series:
         """
@@ -142,6 +152,10 @@ class Conversation:
             self.nlp.vocab[stopword].is_stop = True
         # Regenerate spacy docs
         self.data["spacy_doc"] = self._create_spacy_docs()
+
+    @property
+    def n_utterances(self):
+        return self.data.shape[0]
 
     @property
     def n_speakers(self) -> int:
