@@ -128,8 +128,8 @@ class Conversation:
         self.data["spacy_doc"] = self._create_spacy_docs()
 
     def __repr__(self):
-        if "name" in self.nlp.meta:
-            model_name = self.nlp.meta["name"]
+        if "name" in self.nlp.meta and "lang" in self.nlp.meta:
+            model_name = f"{self.nlp.meta['lang']}_{self.nlp.meta['name']}"
         else:
             model_name = "custom"
         return (
