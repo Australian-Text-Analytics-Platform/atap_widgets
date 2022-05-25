@@ -31,7 +31,7 @@ sentence-transformers = "^2.1.0"
 jupyterlab = "^3.4"
 en-core-web-sm = {url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.1.0/en_core_web_sm-3.1.0-py3-none-any.whl"}
 pytest = "^7.0.1"
-coverage = {extras = ["toml"], version = "^6.3"}
+coverage = {extras = ["toml"], version = "^6.4"}
 safety = "^1.10.3"
 xdoctest = {extras = ["colors"], version = "^1.0.0"}
 sphinx = "^4.3"
