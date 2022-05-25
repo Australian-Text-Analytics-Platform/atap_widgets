@@ -210,7 +210,7 @@ numpy = ">=1.15.0"
 
 [[package]]
 name = "bokeh"
-version = "2.4.2"
+version = "2.4.3"
 description = "Interactive plots and applications in the browser from Python"
 category = "main"
 optional = false
@@ -2612,8 +2612,8 @@ blis = [
     {file = "blis-0.7.7.tar.gz", hash = "sha256:5d4a81f9438db7a19ac8e64ad41331f65a659ea8f3bb1889a9c2088cfd9fe104"},
 ]
 bokeh = [
-    {file = "bokeh-2.4.2-py3-none-any.whl", hash = "sha256:2a842d717feeee802e668054277c09054b6f1561557a16dddaf5f7c452f2728c"},
-    {file = "bokeh-2.4.2.tar.gz", hash = "sha256:f0a4b53364ed3b7eb936c5cb1a4f4132369e394c7ae0a8ef420459410958033d"},
+    {file = "bokeh-2.4.3-py3-none-any.whl", hash = "sha256:104d2f0a4ca7774ee4b11e545aa34ff76bf3e2ad6de0d33944361981b65da420"},
+    {file = "bokeh-2.4.3.tar.gz", hash = "sha256:ef33801161af379665ab7a34684f2209861e3aefd5c803a21fbbb99d94874b03"},
 ]
 cachetools = [
     {file = "cachetools-5.0.0-py3-none-any.whl", hash = "sha256:8fecd4203a38af17928be7b90689d8083603073622229ca7077b72d8e5a976e4"},
