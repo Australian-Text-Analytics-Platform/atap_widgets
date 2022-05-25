@@ -241,9 +241,15 @@ def test_contingency_counts_random_data():
     assert (sum(contingency.values()) == counts["total_windows"]).all().all()
 
 
-def test_get_term_similarity_matrix(example_cooccurrence_counts):
-    term_similarity = ConceptSimilarityModel.get_term_similarity_matrix(
-        **example_cooccurrence_counts
+def test_get_term_similarity_matrix(
+    example_similarity_conversation, example_cooccurrence_counts
+):
+    # Note: we need to set up a concept_model instance but we are not
+    #   actually using data from it, as we override the counts in
+    #   get_term_similarity_matrix()
+    concept_model = ConceptSimilarityModel(example_similarity_conversation)
+    term_similarity = concept_model.get_term_similarity_matrix(
+        cooccurrence_counts=example_cooccurrence_counts
     )
     # Should be (P(i, j) * P(not_i, not_j)) / (P(not_i, j) * P(i, not_j))
     assert term_similarity.loc["A", "B"] == ((1 / 5 * 1 / 5) / (1 / 5 * 2 / 5))

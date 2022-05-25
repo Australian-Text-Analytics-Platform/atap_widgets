@@ -516,6 +516,15 @@ class ConceptSimilarityModel(BaseSimilarityModel):
         super().__init__(conversation=conversation, key_terms=key_terms)
         self.sentence_window_size = sentence_window_size
 
+    def __repr__(self):
+        return (
+            f"ConceptSimilarityModel(key_terms={len(self.key_terms)}, "
+            + f"sentence_window_size={self.sentence_window_size}"
+        )
+
+    def __str__(self):
+        return repr(self)
+
     @staticmethod
     def _get_sentence_windows(doc: spacy.tokens.Doc, window_size: int):
         """
@@ -609,12 +618,8 @@ class ConceptSimilarityModel(BaseSimilarityModel):
             ("not_i", "j"): (-1 * cooccurrence).add(occurrence, axis="columns"),
         }
 
-    @classmethod
     def get_term_similarity_matrix(
-        cls,
-        total_windows: int,
-        occurrence: pd.Series,
-        cooccurrence: pd.DataFrame,
+        self, cooccurrence_counts: Optional[dict] = None
     ) -> pd.DataFrame:
         """
         Calculate the similarity score S(t_i, t_j) between each pair of terms t_i.
@@ -622,11 +627,10 @@ class ConceptSimilarityModel(BaseSimilarityModel):
         See Angus (2012): https://doi.org/10/b49pvx
         for details of how to calculate these scores.
         """
-        contingency_counts = cls._get_contingency_counts(
-            total_windows=total_windows,
-            occurrence=occurrence,
-            cooccurrence=cooccurrence,
-        )
+        if cooccurrence_counts is None:
+            cooccurrence_counts = self.get_cooccurrence_counts()
+        contingency_counts = self._get_contingency_counts(**cooccurrence_counts)
+        total_windows = cooccurrence_counts["total_windows"]
         # Convert to probabilities
         contingency_probs: Dict[Tuple[str, str], pd.DataFrame] = {
             k: v / total_windows for k, v in contingency_counts.items()
@@ -647,15 +651,24 @@ class ConceptSimilarityModel(BaseSimilarityModel):
         similarity_matrix = similarity_matrix.where(similarity_matrix <= 1, 0.5)
         return similarity_matrix
 
-    def get_concept_vectors(self, term_similarity_matrix: pd.DataFrame) -> pd.DataFrame:
+    def get_concept_vectors(
+        self, term_similarity_matrix: Optional[pd.DataFrame] = None
+    ) -> pd.DataFrame:
         """
         Get the feature vectors for each document.
 
+        Args:
+            term_similarity_matrix: Term-Term similarity matrix, as
+            returned by ConceptSimilarityModel.get_term_similarity_matrix.
+            If this is not provided, it will be recalculated, which
+            may be slow for larger datasets.
         Returns:
             A dataframe where the rows are the top terms in the corpus,
             and the columns are documents. Values are the feature value for
             that term's concept in each document.
         """
+        if term_similarity_matrix is None:
+            term_similarity_matrix = self.get_term_similarity_matrix()
         term_doc_df = pd.DataFrame(
             self.doc_term_matrix.T.todense(),
             index=self.binary_vectorizer.terms_list,
@@ -665,10 +678,7 @@ class ConceptSimilarityModel(BaseSimilarityModel):
         return key_term_similarity @ term_doc_df
 
     def get_conversation_similarity(self):
-        counts = self.get_cooccurrence_counts()
-        term_similarity_matrix = self.get_term_similarity_matrix(**counts)
-        concept_vectors = self.get_concept_vectors(term_similarity_matrix)
-
+        concept_vectors = self.get_concept_vectors()
         doc_doc_cosine = pd.DataFrame(
             pairwise.cosine_similarity(concept_vectors.T),
             index=self.conversation.data["text_id"],
