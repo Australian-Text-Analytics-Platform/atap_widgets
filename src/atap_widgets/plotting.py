@@ -75,6 +75,7 @@ class ConversationPlot:
             average word embeddings) will be used.
             The index and column names for the matrix must match the text_id from
             the conversation.
+        grouping_column: Which column to use to group/colour the utterances
         similarity_model: A ConceptSimilarityModel instance that will be used
             to identify the individual terms in common between turns.
         options: A dictionary of options for the visual style of the plot. See
@@ -87,7 +88,9 @@ class ConversationPlot:
         self,
         conversation: Conversation,
         similarity_matrix: Optional[pd.DataFrame] = None,
+        grouping_column: str = "speaker",
         similarity_model: Optional[ConceptSimilarityModel] = None,
+        threshold: Optional[float] = None,
         options: Optional[dict] = None,
     ):
         self.options = self.DEFAULT_OPTIONS.copy()
@@ -95,9 +98,11 @@ class ConversationPlot:
             self.options.update(options)
 
         self.similarity_model = similarity_model
+        self.grouping_column = grouping_column
         long_data = self._get_long_data(conversation, similarity_matrix)
-        self.n_speakers = conversation.n_speakers
-        self.speakers = conversation.get_speaker_names()
+        self.n_groups = long_data["x_group"].nunique()
+        self.groups = long_data["x_group"].unique()
+        self.threshold = threshold
         self.diagonal_datasource = self._get_diagonal_datasource(
             conversation, long_data=long_data
         )
@@ -146,7 +151,7 @@ class ConversationPlot:
 
         # Having some issues converting nested pandas cols to ColumnDataSource,
         #   convert to dict before we try to convert to ColumnDataSource
-        columns = ["x_index", "y_index", "x_speaker", "y_speaker", "similarity"]
+        columns = ["x_index", "y_index", "x_group", "y_group", "similarity"]
         if self.similarity_model is not None:
             columns.append("concepts")
         similarity_dict = similarity_data[columns].to_dict(orient="list")
@@ -191,7 +196,7 @@ class ConversationPlot:
         text_info = pd.DataFrame(
             {
                 "n_words": current_data["spacy_doc"].map(len),
-                "speaker": current_data["speaker"],
+                "group": current_data[self.grouping_column],
             }
         )
         # Log-scale number of words for rectangle sizes
@@ -216,12 +221,12 @@ class ConversationPlot:
         # Get x properties
         similarity["width"] = similarity["x_index"].map(text_info["size"])
         similarity["x_position"] = similarity["x_index"].map(text_info["position"])
-        similarity["x_speaker"] = similarity["x_index"].map(text_info["speaker"])
+        similarity["x_group"] = similarity["x_index"].map(text_info["group"])
         similarity["n_words"] = similarity["x_index"].map(text_info["n_words"])
         # Get y properties
         similarity["height"] = similarity["y_index"].map(text_info["size"])
         similarity["y_position"] = similarity["y_index"].map(text_info["position"])
-        similarity["y_speaker"] = similarity["y_index"].map(text_info["speaker"])
+        similarity["y_group"] = similarity["y_index"].map(text_info["group"])
 
         return similarity
 
@@ -231,7 +236,7 @@ class ConversationPlot:
         tiles
         """
         columns = [
-            models.TableColumn(field="x_speaker", title="speaker"),
+            models.TableColumn(field="x_group", title="group"),
             models.TableColumn(
                 field="text", title="text", formatter=_get_word_wrap_formatter()
             ),
@@ -250,15 +255,21 @@ class ConversationPlot:
         )
         return table
 
-    def _get_categorical_palette(
-        self, n_colours: int, palette_name: str = "Category10"
-    ):
+    @staticmethod
+    def _get_categorical_palette(n_colours: int):
         """
         Return a palette of n_colours
         """
         # bokeh doesn't have 2-colour palettes, just use the 3-colour
         palette_n = max(n_colours, 3)
-        return palettes.d3[palette_name][palette_n][:n_colours]
+        # Category10 palette looks nicer for smaller numbers of colours
+        if palette_n <= 10:
+            return palettes.d3["Category10"][palette_n][:n_colours]
+        # Use Category20 for larger palettes
+        elif palette_n <= 20:
+            return palettes.d3["Category20"][palette_n]
+        else:
+            return palettes.turbo(palette_n)
 
     def show(self, autodetect_binder: bool = True, **kwargs):
         """
@@ -352,21 +363,35 @@ class ConversationPlot:
                 aspect_scale=1.0,
             )
 
-            # Set up speaker colours
-            speaker_colours = self._get_categorical_palette(self.n_speakers)
-            speaker_cmap = factor_cmap(
-                "x_speaker", palette=speaker_colours, factors=self.speakers
+            # Set up group colours
+            group_colours = self._get_categorical_palette(self.n_groups)
+            group_cmap = factor_cmap(
+                "x_group", palette=group_colours, factors=self.groups
             )
-            other_speaker_cmap = factor_cmap(
-                "y_speaker", palette=speaker_colours, factors=self.speakers
+            other_group_cmap = factor_cmap(
+                "y_group", palette=group_colours, factors=self.groups
             )
             # Plot similarity tiles
+            if self.threshold is None:
+                threshold = 0
+            else:
+                threshold = self.threshold
+            tile_filter = models.BooleanFilter(
+                [
+                    similarity >= threshold
+                    for similarity in self.similarity_datasource.data["similarity"]
+                ]
+            )
+            thresholded_tiles_view = models.CDSView(
+                filters=[tile_filter], source=self.similarity_datasource
+            )
             plot.multi_polygons(
                 xs="upper_triangle_x",
                 ys="upper_triangle_y",
                 alpha="similarity",
-                color=speaker_cmap,
+                color=group_cmap,
                 source=self.similarity_datasource,
+                view=thresholded_tiles_view,
                 line_width=0,
                 name="similarity_upper",
             )
@@ -374,8 +399,9 @@ class ConversationPlot:
                 xs="lower_triangle_x",
                 ys="lower_triangle_y",
                 alpha="similarity",
-                color=other_speaker_cmap,
+                color=other_group_cmap,
                 source=self.similarity_datasource,
+                view=thresholded_tiles_view,
                 line_width=0,
                 name="similarity_lower",
             )
@@ -384,10 +410,10 @@ class ConversationPlot:
             plot.rect(
                 x="x_position",
                 y="y_position",
-                color=speaker_cmap,
+                color=group_cmap,
                 source=self.diagonal_datasource,
                 name="text_tiles",
-                legend_field="x_speaker",
+                legend_field="x_group",
             )
 
             # Options/style
