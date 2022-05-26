@@ -604,8 +604,10 @@ class ConceptSimilarityModel(BaseSimilarityModel):
             A dictionary mapping from 2-tuples ('i', 'j'), ('i', 'not_j'), etc. to a
             DataFrame of the counts of each.
         """
-        return {
+        raw_counts = {
             ("i", "j"): cooccurrence,
+            # NOTE: using some slightly tricky syntax to subtract the
+            #   cooccurrence from the occcurrence efficiently
             ("not_i", "not_j"): (
                 total_windows
                 - (
@@ -617,6 +619,7 @@ class ConceptSimilarityModel(BaseSimilarityModel):
             ("i", "not_j"): (-1 * cooccurrence).add(occurrence, axis="rows"),
             ("not_i", "j"): (-1 * cooccurrence).add(occurrence, axis="columns"),
         }
+        return raw_counts
 
     def get_term_similarity_matrix(
         self, cooccurrence_counts: Optional[dict] = None
@@ -630,11 +633,37 @@ class ConceptSimilarityModel(BaseSimilarityModel):
         if cooccurrence_counts is None:
             cooccurrence_counts = self.get_cooccurrence_counts()
         contingency_counts = self._get_contingency_counts(**cooccurrence_counts)
+        occurrence = cooccurrence_counts["occurrence"]
         total_windows = cooccurrence_counts["total_windows"]
         # Convert to probabilities
         contingency_probs: Dict[Tuple[str, str], pd.DataFrame] = {
             k: v / total_windows for k, v in contingency_counts.items()
         }
+        # Corrections
+        # See https://doi.org/10/b49pvx, p. 989 for details
+        # This count is used in multiple corrections so pull it out
+        ij_count = contingency_counts[("i", "j")]
+
+        # Correction for p(not_i, not_j)
+        count_plus_n = ij_count + total_windows
+        # Create a dataframe where the cell at (i, j) is O_i + O_j,
+        #   the total occurrence of i + j
+        total_occurrences = (
+            (ij_count * 0).add(occurrence, axis="rows").add(occurrence, axis="columns")
+        )
+        # NOTE: Having some issues with boolean indexing if the
+        #   boolean dataframe isn't explicitly cast to numpy bool
+        mask = (total_occurrences == count_plus_n).to_numpy(dtype="bool")
+        contingency_probs[("not_i", "not_j")][mask] = 1
+
+        # Correction for p(i, not_j)
+        # Occurrence of i equals cooccurrence ij
+        i_equals_ij = ij_count.eq(occurrence, axis="rows").to_numpy(dtype="bool")
+        contingency_probs[("i", "not_j")][i_equals_ij] = 1
+        # Correction for p(not_i, j)
+        # Occurrence of j equals cooccurrence ij
+        j_equals_ij = ij_count.eq(occurrence, axis="columns").to_numpy(dtype="bool")
+        contingency_probs[("not_i", "j")][j_equals_ij] = 1
 
         numerator = (
             contingency_probs[("i", "j")] * contingency_probs[("not_i", "not_j")]
@@ -644,11 +673,6 @@ class ConceptSimilarityModel(BaseSimilarityModel):
         )
 
         similarity_matrix = numerator / denominator
-        # NOTE: in order to divide invalid infinite values, we substitute
-        #  0.5 as the similarity value for values > 1. This occurs when
-        #  a term only occurs in a single context, such that the denominator
-        #  is zero
-        similarity_matrix = similarity_matrix.where(similarity_matrix <= 1, 0.5)
         return similarity_matrix
 
     def get_concept_vectors(
