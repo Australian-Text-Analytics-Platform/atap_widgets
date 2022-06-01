@@ -309,7 +309,7 @@ class ConversationPlot:
             similarity_tooltips = [
                 ("ID (column)", "@x_index"),
                 ("ID (row)", "@y_index"),
-                ("Similarity", "@similarity"),
+                ("Similarity", "@similarity{0.00}"),
             ]
             if self.similarity_model is not None:
                 similarity_tooltips.append(("Shared concepts:", "@concepts"))
