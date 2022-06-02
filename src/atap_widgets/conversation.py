@@ -386,6 +386,7 @@ class Conversation:
                 current_recurrence *= n_cells
             recurrence.loc[group_a, group_b] = current_recurrence
 
+        recurrence = recurrence.fillna(0)
         return recurrence
 
 
