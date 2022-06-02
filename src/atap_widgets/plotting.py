@@ -432,7 +432,7 @@ class ConversationPlot:
                     layouts.row(models.Div(text=PLOT_HELP_TEXT, width=400)),
                     layouts.row(plot),
                     layouts.row(models.Div(text="<h3>Selected text</h3>")),
-                    layouts.row(text_table),
+                    layouts.row(text_table, sizing_mode="stretch_height"),
                     sizing_mode="stretch_width",
                 )
             )
