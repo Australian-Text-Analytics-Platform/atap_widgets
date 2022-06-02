@@ -249,7 +249,7 @@ class ConversationPlot:
             source=self.diagonal_datasource,
             columns=columns,
             autosize_mode="fit_columns",
-            sizing_mode="stretch_width",
+            sizing_mode="stretch_both",
             row_height=100,
             view=empty_view,
         )
