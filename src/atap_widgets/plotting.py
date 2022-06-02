@@ -309,7 +309,7 @@ class ConversationPlot:
             similarity_tooltips = [
                 ("ID (column)", "@x_index"),
                 ("ID (row)", "@y_index"),
-                ("Similarity", "@similarity"),
+                ("Similarity", "@similarity{0.00}"),
             ]
             if self.similarity_model is not None:
                 similarity_tooltips.append(("Shared concepts:", "@concepts"))
@@ -432,7 +432,7 @@ class ConversationPlot:
                     layouts.row(models.Div(text=PLOT_HELP_TEXT, width=400)),
                     layouts.row(plot),
                     layouts.row(models.Div(text="<h3>Selected text</h3>")),
-                    layouts.row(text_table),
+                    layouts.row(text_table, sizing_mode="stretch_height"),
                     sizing_mode="stretch_width",
                 )
             )
