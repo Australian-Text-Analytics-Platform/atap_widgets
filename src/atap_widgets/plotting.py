@@ -253,6 +253,8 @@ class ConversationPlot:
             sizing_mode="stretch_both",
             row_height=100,
             view=empty_view,
+            selectable=False,
+            reorderable=False,
         )
         return table
 
