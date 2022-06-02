@@ -1,3 +1,4 @@
+import itertools
 import warnings
 from typing import Callable
 from typing import Optional
@@ -252,6 +253,8 @@ class ConversationPlot:
             sizing_mode="stretch_both",
             row_height=100,
             view=empty_view,
+            selectable=False,
+            reorderable=False,
         )
         return table
 
@@ -268,8 +271,12 @@ class ConversationPlot:
         # Use Category20 for larger palettes
         elif palette_n <= 20:
             return palettes.d3["Category20"][palette_n]
-        else:
+        elif palette_n <= 256:
             return palettes.turbo(palette_n)
+        # Cycle through Turbo if we need more than 256 colours
+        else:
+            cycle_turbo = itertools.cycle(palettes.turbo(256))
+            return list(itertools.islice(cycle_turbo, palette_n))
 
     def show(self, autodetect_binder: bool = True, **kwargs):
         """
