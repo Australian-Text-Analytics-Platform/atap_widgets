@@ -2,6 +2,7 @@ import itertools
 import warnings
 from typing import Callable
 from typing import Optional
+from typing import TypedDict
 
 import numpy as np
 import pandas as pd
@@ -44,14 +45,15 @@ WORD_WRAP_CELL_TEMPLATE = """
 </span>
 """
 
+PLOT_TITLE_TEMPLATE = """
+<h3>{title}</h3>
+
+<p>{text}</p>
+"""
 
 PLOT_HELP_TEXT = """
-<h3>Similarity plot</h3>
-
-<p>
 Click an item on the diagonal to view it in the table below.
 Click anywhere on the background to deselect it.
-</p>
 """
 
 
@@ -62,6 +64,13 @@ def _get_word_wrap_formatter():
     models
     """
     return models.widgets.tables.HTMLTemplateFormatter(template=WORD_WRAP_CELL_TEMPLATE)
+
+
+class PlotOptions(TypedDict, total=False):
+    width: int
+    height: int
+    tile_padding: int
+    show_help_text: bool
 
 
 class ConversationPlot:
@@ -83,7 +92,12 @@ class ConversationPlot:
             ConversationPlot.DEFAULT_OPTIONS for the available options.
     """
 
-    DEFAULT_OPTIONS = {"width": 800, "height": 800, "tile_padding": 1}
+    DEFAULT_OPTIONS: PlotOptions = {
+        "width": 800,
+        "height": 800,
+        "tile_padding": 1,
+        "show_help_text": True,
+    }
 
     def __init__(
         self,
@@ -91,8 +105,9 @@ class ConversationPlot:
         similarity_matrix: Optional[pd.DataFrame] = None,
         grouping_column: str = "speaker",
         similarity_model: Optional[ConceptSimilarityModel] = None,
+        title: str = "Similarity plot",
         threshold: Optional[float] = None,
-        options: Optional[dict] = None,
+        options: Optional[PlotOptions] = None,
     ):
         self.options = self.DEFAULT_OPTIONS.copy()
         if options is not None:
@@ -100,6 +115,9 @@ class ConversationPlot:
 
         self.similarity_model = similarity_model
         self.grouping_column = grouping_column
+        self.title = title
+
+        # Get data required for the plot
         long_data = self._get_long_data(conversation, similarity_matrix)
         self.n_groups = long_data["x_group"].nunique()
         self.groups = long_data["x_group"].unique()
@@ -434,9 +452,13 @@ class ConversationPlot:
             _add_plot_tools(plot)
 
             # Create layout
+            title_section = PLOT_TITLE_TEMPLATE.format(
+                title=self.title,
+                text=PLOT_HELP_TEXT if self.options["show_help_text"] else "",
+            )
             doc.add_root(
                 layouts.column(
-                    layouts.row(models.Div(text=PLOT_HELP_TEXT, width=400)),
+                    layouts.row(models.Div(text=title_section, width=400)),
                     layouts.row(plot),
                     layouts.row(models.Div(text="<h3>Selected text</h3>")),
                     layouts.row(text_table, sizing_mode="stretch_height"),
