@@ -462,6 +462,7 @@ def test_grouped_recurrence(
     # These scores are non-symmetrical, they only include
     #   cells where the second group speaks after the first group
     assert person_to_person.loc["c", "a"] == (0.2) * 1
+    assert person_to_person.loc["a", "a"] == (0.6) * 1
 
     group_to_group = conversation.get_grouped_recurrence(
         similarity, grouping_column="group"

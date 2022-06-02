@@ -1,6 +1,5 @@
 import warnings
 from itertools import combinations
-from itertools import permutations
 from itertools import product
 from typing import Dict
 from typing import List
@@ -371,7 +370,7 @@ class Conversation:
             np.triu(similarity, k=1), index=similarity.index, columns=similarity.columns
         )
 
-        pairs = permutations(groups, 2)
+        pairs = product(groups, repeat=2)
         for group_a, group_b in pairs:
             scores = similarity_upper.loc[
                 current_group == group_a, current_group == group_b
@@ -386,6 +385,7 @@ class Conversation:
                 current_recurrence *= n_cells
             recurrence.loc[group_a, group_b] = current_recurrence
 
+        recurrence = recurrence.fillna(0)
         return recurrence
 
 
