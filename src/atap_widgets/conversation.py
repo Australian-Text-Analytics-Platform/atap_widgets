@@ -336,7 +336,10 @@ class Conversation:
         return recurrence
 
     def get_grouped_recurrence(
-        self, similarity: pd.DataFrame, grouping_column: str = "speaker"
+        self,
+        similarity: pd.DataFrame,
+        grouping_column: str = "speaker",
+        normalize: bool = True,
     ) -> pd.DataFrame:
         """Calculate overall recurrence between groups, e.g. person-to-person
         or group-to-group.
@@ -346,6 +349,9 @@ class Conversation:
         Args:
             similarity: matrix of turn-turn similarity scores for the conversation,
                e.g. from
+            grouping_column: which column in data should be used to form the groups
+            normalize: Should recurrence score be normalized by the number
+              of contributing cells?
         """
         groups = self.data[grouping_column].unique()
         # Group for each text/turn in the conversation
@@ -370,10 +376,15 @@ class Conversation:
             scores = similarity_upper.loc[
                 current_group == group_a, current_group == group_b
             ]
-            # Number of cells eligible to contribute is the total number with
-            #   group_i = a, group_j = b, and in the upper triangle where i < j
-            n_cells = in_upper_triangle.loc[scores.index, scores.columns].sum().sum()
-            recurrence.loc[group_a, group_b] = n_cells * scores.values.sum()
+            current_recurrence = scores.values.sum()
+            if normalize:
+                # Number of cells eligible to contribute is the total number with
+                #   group_i = a, group_j = b, and in the upper triangle where i < j
+                n_cells = (
+                    in_upper_triangle.loc[scores.index, scores.columns].sum().sum()
+                )
+                current_recurrence *= n_cells
+            recurrence.loc[group_a, group_b] = current_recurrence
 
         return recurrence
 
