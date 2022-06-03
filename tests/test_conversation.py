@@ -264,6 +264,31 @@ def test_topic_recurrence_invalid_args(
         )
 
 
+@pytest.mark.parametrize(
+    ["args", "results"],
+    [
+        [("short", "backward", "self"), [("C", ["A"]), ("D", ["B"])]],
+        [("short", "backward", "other"), [("C", ["B"]), ("D", ["C"])]],
+        [("medium", "backward", "self"), [("E", ["A", "C"]), ("F", ["B", "D"])]],
+        [("medium", "backward", "other"), [("E", ["B", "D"]), ("F", ["A", "C", "E"])]],
+        [("long", "backward", "self"), [("G", ["A", "C", "E"]), ("F", ["B", "D"])]],
+        [
+            ("long", "backward", "other"),
+            [("F", ["A", "C", "E"]), ("G", ["B", "D", "F"])],
+        ],
+    ],
+)
+def test_topic_recurrence_scores_backward(
+    args, results, example_similarity_scores, example_similarity_conversation
+):
+    conversation = example_similarity_conversation
+    similarity = example_similarity_scores
+
+    scores = conversation.get_topic_recurrence(similarity, *args)
+    for index, others in results:
+        assert scores[index] == similarity.loc[index, others].sum()
+
+
 def test_topic_recurrence_scores(
     example_similarity_scores, example_similarity_conversation
 ):
@@ -458,11 +483,11 @@ def test_grouped_recurrence(
     person_to_person = conversation.get_grouped_recurrence(
         similarity, grouping_column="speaker"
     )
-    assert person_to_person.loc["a", "c"] == (0.8 + 0.5 + 0.2) * 3
+    assert person_to_person.loc["a", "c"] == (0.8 + 0.5 + 0.2) / 3
     # These scores are non-symmetrical, they only include
     #   cells where the second group speaks after the first group
-    assert person_to_person.loc["c", "a"] == (0.2) * 1
-    assert person_to_person.loc["a", "a"] == (0.6) * 1
+    assert person_to_person.loc["c", "a"] == (0.2) / 1
+    assert person_to_person.loc["a", "a"] == (0.6) / 1
 
     group_to_group = conversation.get_grouped_recurrence(
         similarity, grouping_column="group"
@@ -470,7 +495,7 @@ def test_grouped_recurrence(
     # For this, for each G1 turn, we need to find all the G2
     #   turns that come after it
     g1_g2_scores = [0.8 + 0.5, 0.5 + 0.2, 0.6, 0.2]
-    assert group_to_group.loc["G1", "G2"] == pytest.approx(sum(g1_g2_scores) * 6)
+    assert group_to_group.loc["G1", "G2"] == pytest.approx(sum(g1_g2_scores) / 6)
     # There's only one G2 turn with G1 turns after it
     g2_g1_scores = [0.1 + 0.2]
-    assert group_to_group.loc["G2", "G1"] == pytest.approx(sum(g2_g1_scores) * 2)
+    assert group_to_group.loc["G2", "G1"] == pytest.approx(sum(g2_g1_scores) / 2)
