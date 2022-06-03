@@ -264,6 +264,31 @@ def test_topic_recurrence_invalid_args(
         )
 
 
+@pytest.mark.parametrize(
+    ["args", "results"],
+    [
+        [("short", "backward", "self"), [("C", ["A"]), ("D", ["B"])]],
+        [("short", "backward", "other"), [("C", ["B"]), ("D", ["C"])]],
+        [("medium", "backward", "self"), [("E", ["A", "C"]), ("F", ["B", "D"])]],
+        [("medium", "backward", "other"), [("E", ["B", "D"]), ("F", ["A", "C", "E"])]],
+        [("long", "backward", "self"), [("G", ["A", "C", "E"]), ("F", ["B", "D"])]],
+        [
+            ("long", "backward", "other"),
+            [("F", ["A", "C", "E"]), ("G", ["B", "D", "F"])],
+        ],
+    ],
+)
+def test_topic_recurrence_scores_backward(
+    args, results, example_similarity_scores, example_similarity_conversation
+):
+    conversation = example_similarity_conversation
+    similarity = example_similarity_scores
+
+    scores = conversation.get_topic_recurrence(similarity, *args)
+    for index, others in results:
+        assert scores[index] == similarity.loc[index, others].sum()
+
+
 def test_topic_recurrence_scores(
     example_similarity_scores, example_similarity_conversation
 ):

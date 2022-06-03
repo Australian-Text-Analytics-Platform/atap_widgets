@@ -318,8 +318,8 @@ class Conversation:
                 range_start = index + 1
                 range_end = range_start + recurrence_range
             elif direction == "backward":
-                range_start = index - recurrence_range
-                range_end = range_start + recurrence_range
+                range_start = max(index - recurrence_range, 0)
+                range_end = index
             similarity_vec = similarity.iloc[range_start:range_end, index]
             speaker_vec = speakers.iloc[range_start:range_end]
             if speaker == "self":
@@ -344,6 +344,10 @@ class Conversation:
         or group-to-group.
 
         See https://doi.org/10.1063/1.5024809
+
+        **Note:** the article suggests multiplying by the number of contributing
+        cells to normalize, but this seems odd, instead we divide by the
+        number of cells.
 
         Args:
             similarity: matrix of turn-turn similarity scores for the conversation,
