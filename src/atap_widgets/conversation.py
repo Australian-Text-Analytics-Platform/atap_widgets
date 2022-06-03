@@ -382,10 +382,13 @@ class Conversation:
                 n_cells = (
                     in_upper_triangle.loc[scores.index, scores.columns].sum().sum()
                 )
-                current_recurrence *= n_cells
+                current_recurrence /= n_cells
             recurrence.loc[group_a, group_b] = current_recurrence
 
         recurrence = recurrence.fillna(0)
+        # Set names for index/columns to make scores easier to understand
+        recurrence.index.rename("initiated_by", inplace=True)
+        recurrence.columns.rename("repeated_by", inplace=True)
         return recurrence
 
 
