@@ -490,8 +490,17 @@ def test_conceptual_recurrence_rate(
         + 0.2
     ) * expected_normalization
     assert crr == expected
-    # TODO: article suggests CRR should also equal the sum of the group-to-group
-    #  metrics? But this doesn't seem to work
+    # Total CRR should also be equal to the sum of group-to-group and person-to-person
+    # NOTE: for this to work it seems like you have to use unnormalized scores,
+    #   and then normalize at the end
+    g2g = conversation.get_grouped_recurrence(
+        similarity, grouping_column="group", normalize=False
+    )
+    assert crr == (g2g.sum().sum() * expected_normalization)
+    p2p = conversation.get_grouped_recurrence(
+        similarity, grouping_column="speaker", normalize=False
+    )
+    assert crr == (p2p.sum().sum() * expected_normalization)
 
 
 def test_grouped_recurrence(
