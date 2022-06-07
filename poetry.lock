@@ -1349,7 +1349,7 @@ virtualenv = ">=20.0.8"
 
 [[package]]
 name = "pre-commit-hooks"
-version = "4.2.0"
+version = "4.3.0"
 description = "Some out-of-the-box hooks for pre-commit."
 category = "dev"
 optional = false
@@ -1357,7 +1357,7 @@ python-versions = ">=3.7"
 
 [package.dependencies]
 "ruamel.yaml" = ">=0.15"
-toml = "*"
+tomli = {version = ">=1.1.0", markers = "python_version < \"3.11\""}
 
 [[package]]
 name = "preshed"
@@ -2472,7 +2472,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.8,<3.11"
-content-hash = "8d2522a2906ee13fc47eb306bb45897c8ed24d4da22d98820a405423f272ed01"
+content-hash = "2d0b706cfad9057ab59e08b53bc6f0dc0202e5eefa7a039de68b0bd0c533813d"
 
 [metadata.files]
 alabaster = [
@@ -3204,8 +3204,8 @@ pre-commit = [
     {file = "pre_commit-2.19.0.tar.gz", hash = "sha256:4233a1e38621c87d9dda9808c6606d7e7ba0e087cd56d3fe03202a01d2919615"},
 ]
 pre-commit-hooks = [
-    {file = "pre_commit_hooks-4.2.0-py2.py3-none-any.whl", hash = "sha256:b3a3066c5ecd5fdda9abdc932bd064bd21785ea041659676403e6fc5d964afed"},
-    {file = "pre_commit_hooks-4.2.0.tar.gz", hash = "sha256:9726420c7a071e8cb233a066d36bc074b593a40f0b1b491d1b75aafa55390703"},
+    {file = "pre_commit_hooks-4.3.0-py2.py3-none-any.whl", hash = "sha256:9ccaf7c98794659d345080ee1ea0256a55ae059675045eebdbbc17c0be8c7e4b"},
+    {file = "pre_commit_hooks-4.3.0.tar.gz", hash = "sha256:fda598a4c834d030727e6a615722718b47510f4bed72df4c949f95ba9f5aaf88"},
 ]
 preshed = [
     {file = "preshed-3.0.6-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:66a71ced487516cf81fd0431a3a843514262ae2f33e9a7688b87562258fa75d5"},
