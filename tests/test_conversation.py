@@ -474,6 +474,26 @@ def example_grouped_recurrence_similarity():
     return df
 
 
+def test_conceptual_recurrence_rate(
+    example_grouped_recurrence_conversation, example_grouped_recurrence_similarity
+):
+    conversation = example_grouped_recurrence_conversation
+    similarity = example_grouped_recurrence_similarity
+
+    crr = conversation.get_conceptual_recurrence_rate(similarity)
+    expected_normalization = 2 / (6 * (6 - 1))
+    expected = (
+        (0.9 + 0.8 + 0.7 + 0.6 + 0.5)
+        + (0.5 + 0.4 + 0.3 + 0.2)
+        + (0.1 + 0.2 + 0.3)
+        + (0.5 + 0.6)
+        + 0.2
+    ) * expected_normalization
+    assert crr == expected
+    # TODO: article suggests CRR should also equal the sum of the group-to-group
+    #  metrics? But this doesn't seem to work
+
+
 def test_grouped_recurrence(
     example_grouped_recurrence_conversation, example_grouped_recurrence_similarity
 ):
