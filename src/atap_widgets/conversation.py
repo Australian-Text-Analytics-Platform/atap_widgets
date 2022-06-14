@@ -537,7 +537,7 @@ class ConceptSimilarityModel(BaseSimilarityModel):
     def __repr__(self):
         return (
             f"ConceptSimilarityModel(key_terms={len(self.key_terms)}, "
-            + f"sentence_window_size={self.sentence_window_size}"
+            + f"sentence_window_size={self.sentence_window_size})"
         )
 
     def __str__(self):
