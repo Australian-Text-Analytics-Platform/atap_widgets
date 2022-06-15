@@ -2,7 +2,7 @@ import os
 import urllib
 
 
-DEFAULT_MYBINDER_HOST = "https://gke.mybinder.org"
+DEFAULT_MYBINDER_HOST = "https://hub.gke.mybinder.org"
 
 
 def _get_remote_jupyter_proxy_url(port: int, base_url: str = None):
