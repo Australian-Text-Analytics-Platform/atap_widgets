@@ -298,18 +298,20 @@ class ConcordanceTable:
         results_per_page: Number of results to show at a time.
         window_width: Number of characters to show either side of a match.
         sort: Sort by 'text_id', 'left_context' or 'right_context'.
+        historic_lines: Positive Integer representing number of previous lines to give context.
     """
 
     def __init__(
         self,
         df: pd.DataFrame,
         keyword: str = "",
+        historic_lines: int = 1,
         regex: bool = False,
         ignore_case: bool = True,
         whole_word: bool = False,
         results_per_page: int = 20,
         window_width: int = 50,
-        sort: str = "text_id",
+        sort: str = "text_id"
     ):
         self.df = df
         self.keyword = keyword
@@ -319,8 +321,10 @@ class ConcordanceTable:
         self.results_per_page = results_per_page
         self.window_width = window_width
         self.sort = sort
+        self.historic_lines = historic_lines
         self.element_id = "atap_" + str(uuid.uuid4())
         self.css = SEARCH_CSS_TEMPLATE.format(element_id=self.element_id)
+        
 
     def _repr_mimebundle_(self, include, exclude):
         """
@@ -361,6 +365,31 @@ class ConcordanceTable:
         except re.error:
             return False
 
+    def _get_history(self,search_results) -> pd.Series:
+        """ Given matches return historic context 
+        """
+        if self.historic_lines < 1:
+            raise ValueError("historic_lines must be positive integer")
+        history = dict()
+        if self.historic_lines > 1: #user has requested context
+            match_indicies = search_results.index
+            for i in match_indicies:
+                base = max(0,i-self.historic_lines)
+                if base == i:
+                    context = self.df["text"].iloc[i]
+                    history[i] = context
+                else:
+                    context = self.df["text"].iloc[base:i] 
+                    collect = ""
+                    for line in context: #Ugly way to reduce elements of series to one list
+                        collect = collect + line
+                    context = collect
+                    history[i] = context     
+        history = pd.Series(history)
+        history.name = "history"
+        history.index.name = "text_id"
+        return history
+
     def _get_results(self) -> pd.DataFrame:
         """
         Return a Series of matches, with text_id as the index. Each element
@@ -391,6 +420,10 @@ class ConcordanceTable:
         results_df.reset_index(inplace=True)
         # Reorder columns
         results_df = results_df[["text_id", "left_context", "match", "right_context"]]
+        #Get Context
+        if self.historic_lines != 1: #user has specified context
+            history = self._get_history(search_results)
+            results_df["history"] = history.values
         # Sort
         if self.sort == "text_id":
             results_df = results_df.sort_values(by="text_id")
