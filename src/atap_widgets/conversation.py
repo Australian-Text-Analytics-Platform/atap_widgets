@@ -349,6 +349,10 @@ class Conversation:
         Returns:
             Conceptual recurrence rate, a single value.
         """
+        if self.n_utterances < 2:
+            raise ValueError(
+                "Can't calculate recurrence rate for a conversation with less than 2 utterances"
+            )
         # Note: this calculation works out to the mean of the upper triangle
         # (excluding main diagonal). Leaving it as is as it corresponds
         # well to the formula, could maybe be optimized using the mean
