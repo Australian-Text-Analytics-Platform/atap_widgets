@@ -482,6 +482,7 @@ def test_conceptual_recurrence_rate(
     similarity = example_grouped_recurrence_similarity
 
     crr = conversation.get_conceptual_recurrence_rate(similarity)
+    # This is 1 / the number of cells in the upper triangle
     expected_normalization = 2 / (6 * (6 - 1))
     expected = (
         (0.9 + 0.8 + 0.7 + 0.6 + 0.5)
