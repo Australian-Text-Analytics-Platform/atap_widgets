@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "atap_widgets"
-version = "0.2.23"
+version = "0.2.24"
 description = "Interactive widgets used by the Australian Text Analytics Platform"
 authors = ["Marius Mather <marius.mather@sydney.edu.au>"]
 license = "MIT"
@@ -43,7 +43,7 @@ flake8-bandit = "^3.0"
 flake8-bugbear = "^22.6.22"
 flake8-docstrings = "^1.6.0"
 flake8-rst-docstrings = "^0.2.5"
-pep8-naming = "^0.13.0"
+pep8-naming = "^0.13.1"
 darglint = "^1.8.0"
 reorder-python-imports = "^3.0"
 pre-commit-hooks = "^4.3.0"
