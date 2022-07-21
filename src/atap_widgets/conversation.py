@@ -804,6 +804,14 @@ class ConceptSimilarityModel(BaseSimilarityModel):
 
 
 class EmbeddingModel:
+    """
+    Model that uses sentence embeddings from the RoBERTa model
+    to calculate similarity.
+
+    Requires the sentence_transformers package to be installed,
+    this is optional as it's a fairly heavy dependency.
+    """
+
     def __init__(
         self, conversation: Conversation, model_name: str = "stsb-roberta-base-v2"
     ):
