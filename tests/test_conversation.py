@@ -2,6 +2,7 @@
 import itertools
 import random
 
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -472,6 +473,40 @@ def example_grouped_recurrence_similarity():
         index=[1, 2, 3, 4, 5, 6],
     )
     return df
+
+
+def test_conceptual_recurrence_rate(
+    example_grouped_recurrence_conversation, example_grouped_recurrence_similarity
+):
+    conversation = example_grouped_recurrence_conversation
+    similarity = example_grouped_recurrence_similarity
+
+    crr = conversation.get_conceptual_recurrence_rate(similarity)
+    # This is 1 / the number of cells in the upper triangle
+    expected_normalization = 2 / (6 * (6 - 1))
+    expected = (
+        (0.9 + 0.8 + 0.7 + 0.6 + 0.5)
+        + (0.5 + 0.4 + 0.3 + 0.2)
+        + (0.1 + 0.2 + 0.3)
+        + (0.5 + 0.6)
+        + 0.2
+    ) * expected_normalization
+    assert crr == expected
+    # NOTE: should also be able to calculate this as the mean of the
+    #   upper triangle. Might be a way to optimize this calc if needed?
+    upper_indices = np.triu_indices(similarity.shape[0], k=1)
+    assert crr == similarity.values[upper_indices].mean()
+    # Total CRR should also be equal to the sum of group-to-group and person-to-person
+    # NOTE: for this to work it seems like you have to use unnormalized scores,
+    #   and then normalize at the end
+    g2g = conversation.get_grouped_recurrence(
+        similarity, grouping_column="group", normalize=False
+    )
+    assert crr == (g2g.sum().sum() * expected_normalization)
+    p2p = conversation.get_grouped_recurrence(
+        similarity, grouping_column="speaker", normalize=False
+    )
+    assert crr == (p2p.sum().sum() * expected_normalization)
 
 
 def test_grouped_recurrence(

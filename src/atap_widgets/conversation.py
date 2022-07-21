@@ -334,6 +334,34 @@ class Conversation:
 
         return recurrence
 
+    def get_conceptual_recurrence_rate(self, similarity: pd.DataFrame) -> float:
+        """
+        Calculate the overall conceptual recurrence rate for the conversation.
+
+        See https://doi.org/10.1063/1.5024809
+
+        See `Conversation.get_grouped_recurrence()` for the person-to-person
+        and group-to-group metrics which are related to this
+
+        Args:
+            similarity: A matrix of similarity scores for the conversation.
+
+        Returns:
+            Conceptual recurrence rate, a single value.
+        """
+        if self.n_utterances < 2:
+            raise ValueError(
+                "Can't calculate recurrence rate for a conversation with less than 2 utterances"
+            )
+        # Note: this calculation works out to the mean of the upper triangle
+        # (excluding main diagonal). Leaving it as is as it corresponds
+        # well to the formula, could maybe be optimized using the mean
+        similarity_upper = pd.DataFrame(
+            np.triu(similarity, k=1), index=similarity.index, columns=similarity.columns
+        )
+        normalization_factor = 2 / (self.n_utterances * (self.n_utterances - 1))
+        return similarity_upper.sum().sum() * normalization_factor
+
     def get_grouped_recurrence(
         self,
         similarity: pd.DataFrame,
