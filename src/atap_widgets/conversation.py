@@ -11,12 +11,10 @@ from typing import Union
 
 import numpy as np
 import pandas as pd
-import sentence_transformers
 import spacy
 import textacy
 from cytoolz.itertoolz import concat
 from cytoolz.itertoolz import sliding_window
-from sentence_transformers import SentenceTransformer
 from sklearn.metrics import pairwise
 from textacy.representations import matrix_utils
 from textacy.representations.vectorizers import Vectorizer
@@ -809,10 +807,23 @@ class EmbeddingModel:
     def __init__(
         self, conversation: Conversation, model_name: str = "stsb-roberta-base-v2"
     ):
+        try:
+            from sentence_transformers import SentenceTransformer
+        except ImportError as error:
+            print(
+                """
+            sentence_transformers package does not seem to be installed.
+            sentence_transformers is an optional dependency, please
+            install it via conda or pip
+            """
+            )
+            raise error
         self.conversation = conversation
         self.model = SentenceTransformer(model_name)
 
     def get_conversation_similarity(self):
+        import sentence_transformers
+
         encoding = self.model.encode(self.conversation.data["text"])
         similarity = sentence_transformers.util.pytorch_cos_sim(encoding, encoding)
         return pd.DataFrame(
