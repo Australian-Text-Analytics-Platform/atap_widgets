@@ -334,8 +334,7 @@ class Conversation:
 
         return recurrence
 
-    @staticmethod
-    def get_conceptual_recurrence_rate(similarity: pd.DataFrame) -> float:
+    def get_conceptual_recurrence_rate(self, similarity: pd.DataFrame) -> float:
         """
         Calculate the overall conceptual recurrence rate for the conversation.
 
@@ -356,8 +355,7 @@ class Conversation:
         similarity_upper = pd.DataFrame(
             np.triu(similarity, k=1), index=similarity.index, columns=similarity.columns
         )
-        n_utterances = similarity.shape[0]
-        normalization_factor = 2 / (n_utterances * (n_utterances - 1))
+        normalization_factor = 2 / (self.n_utterances * (self.n_utterances - 1))
         return similarity_upper.sum().sum() * normalization_factor
 
     def get_grouped_recurrence(
