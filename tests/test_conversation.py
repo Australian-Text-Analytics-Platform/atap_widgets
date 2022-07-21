@@ -2,6 +2,7 @@
 import itertools
 import random
 
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -490,6 +491,10 @@ def test_conceptual_recurrence_rate(
         + 0.2
     ) * expected_normalization
     assert crr == expected
+    # NOTE: should also be able to calculate this as the mean of the
+    #   upper triangle. Might be a way to optimize this calc if needed?
+    upper_indices = np.triu_indices(similarity.shape[0], k=1)
+    assert crr == similarity.values[upper_indices].mean()
     # Total CRR should also be equal to the sum of group-to-group and person-to-person
     # NOTE: for this to work it seems like you have to use unnormalized scores,
     #   and then normalize at the end

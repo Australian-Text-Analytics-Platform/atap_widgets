@@ -350,6 +350,9 @@ class Conversation:
         Returns:
             Conceptual recurrence rate, a single value.
         """
+        # Note: this calculation works out to the mean of the upper triangle
+        # (excluding main diagonal). Leaving it as is as it corresponds
+        # well to the formula, could maybe be optimized using the mean
         similarity_upper = pd.DataFrame(
             np.triu(similarity, k=1), index=similarity.index, columns=similarity.columns
         )
