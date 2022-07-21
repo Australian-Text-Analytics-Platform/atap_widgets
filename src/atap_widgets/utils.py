@@ -2,16 +2,24 @@ import os
 import urllib
 
 
-def _get_remote_jupyter_proxy_url(
-    port: int, base_url: str = "https://notebooks.gesis.org/"
-):
+DEFAULT_MYBINDER_HOST = "https://hub.gke.mybinder.org"
+
+
+def _get_remote_jupyter_proxy_url(port: int, base_url: str = None):
     """
     Callable to configure Bokeh's show method when a proxy must be
-    configured.
+    configured. If the environment variable BINDER_EXTERNAL_URL
+    is set, this will be used as the base_url. Otherwise
+    we fall back to DEFAULT_MYBINDER_HOST.
 
     If port is None we're asking about the URL
     for the origin header.
     """
+    if base_url is None:
+        if "BINDER_EXTERNAL_URL" in os.environ:
+            base_url = os.environ["BINDER_EXTERNAL_URL"]
+        else:
+            base_url = DEFAULT_MYBINDER_HOST
     host = urllib.parse.urlparse(base_url).netloc
 
     # If port is None we're asking for the URL origin
