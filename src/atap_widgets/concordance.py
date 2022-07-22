@@ -1,5 +1,6 @@
 import math
 import re
+from unittest import result
 import uuid
 from typing import Union
 
@@ -39,6 +40,10 @@ SEARCH_CSS_TEMPLATE = """
 }}
 #{element_id} .atap.context.context_right {{
     text-align: left;
+    padding-left: 0px;
+}}
+#{element_id} .atap.context.history {{ 
+    text-align: right;
     padding-left: 0px;
 }}
 #{element_id}.search_table th {{
@@ -83,6 +88,7 @@ SEARCH_ROW_TEMPLATE = """
     <td class="atap context context_left">{left_context}</td>
     <td class="atap search_highlight">{match}</td>
     <td class="atap context context_right">{right_context}</td>
+    <td class="atap context history">{history}</td>
 </tr>
 """
 
@@ -196,11 +202,12 @@ class ConcordanceWidget:
             disabled=False,
             style={"description_width": "initial"},
         )
-        context_input = ipywidgets.Checkbox(
-            value=False,
-            description="Provide Context",
-            disabled=False,
-            style={"description_width": "initial"},
+        context_input = ipywidgets.BoundedIntText(
+            value=1,
+            min=1,
+            max=10,
+            step=1,
+            description="Lines in Context:",
         )
         page_input = ipywidgets.BoundedIntText(
             value=1,
@@ -228,7 +235,7 @@ class ConcordanceWidget:
                 "regex": regex_toggle_input,
                 "ignore_case": ignore_case_input,
                 "whole_word": whole_word_input,
-                "context": context_input,
+                "historic_lines": context_input,
                 "page": page_input,
                 "window_width": window_width_input,
                 "sort": sort_input,
@@ -267,10 +274,10 @@ class ConcordanceWidget:
 
         # Set up layout of widgets
         checkboxes = ipywidgets.HBox(
-            [regex_toggle_input, ignore_case_input, whole_word_input,context_input]
+            [regex_toggle_input, ignore_case_input, whole_word_input]
         )
         checkboxes.layout.justify_content = "flex-start"
-        number_inputs = ipywidgets.HBox([page_input, window_width_input])
+        number_inputs = ipywidgets.HBox([page_input, window_width_input,context_input])
         number_inputs.layout.justify_content = "flex-start"
         return ipywidgets.VBox(
             [
@@ -404,7 +411,7 @@ class ConcordanceTable:
         """
         Return a Series of matches, with text_id as the index. Each element
         is a match returned by keyword_in_context(), i.e. a left_context,
-        match, right_context tuple.
+        match, right_context tuple. column for history also given with 1 line as default.
         """
 
         def _get_matches(doc):
@@ -434,6 +441,8 @@ class ConcordanceTable:
         if self.historic_lines != 1: #user has specified context
             history = self._get_history(search_results)
             results_df["history"] = history.values
+        else:
+            results_df["history"] = results_df["left_context"] +  results_df["match"] + results_df["right_context"] #verbose for now - need a checkbox to suppress or show
         # Sort
         if self.sort == "text_id":
             results_df = results_df.sort_values(by="text_id")
