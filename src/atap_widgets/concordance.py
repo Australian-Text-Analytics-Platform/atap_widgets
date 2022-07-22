@@ -196,6 +196,12 @@ class ConcordanceWidget:
             disabled=False,
             style={"description_width": "initial"},
         )
+        context_input = ipywidgets.Checkbox(
+            value=False,
+            description="Provide Context",
+            disabled=False,
+            style={"description_width": "initial"},
+        )
         page_input = ipywidgets.BoundedIntText(
             value=1,
             min=1,
@@ -222,6 +228,7 @@ class ConcordanceWidget:
                 "regex": regex_toggle_input,
                 "ignore_case": ignore_case_input,
                 "whole_word": whole_word_input,
+                "context": context_input,
                 "page": page_input,
                 "window_width": window_width_input,
                 "sort": sort_input,
@@ -260,7 +267,7 @@ class ConcordanceWidget:
 
         # Set up layout of widgets
         checkboxes = ipywidgets.HBox(
-            [regex_toggle_input, ignore_case_input, whole_word_input]
+            [regex_toggle_input, ignore_case_input, whole_word_input,context_input]
         )
         checkboxes.layout.justify_content = "flex-start"
         number_inputs = ipywidgets.HBox([page_input, window_width_input])
@@ -382,7 +389,10 @@ class ConcordanceTable:
                     context = self.df["text"].iloc[base:i] 
                     collect = ""
                     for line in context: #Ugly way to reduce elements of series to one list
-                        collect = collect + line
+                        if len(collect) == 0: 
+                            collect = collect + line
+                        else:
+                            collect = collect + " " + line
                     context = collect
                     history[i] = context     
         history = pd.Series(history)
@@ -517,7 +527,7 @@ class ConcordanceTable:
         _set_col_widths()
 
         writer.save()
-
+ 
     @staticmethod
     def sort_by_context(results: pd.DataFrame, context: str = "left_context"):
         """
