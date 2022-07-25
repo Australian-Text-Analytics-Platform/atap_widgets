@@ -385,9 +385,11 @@ class ConcordanceTable:
         if self.historic_lines < 1:
             raise ValueError("historic_lines must be positive integer")
         history = dict()
+        
         if self.historic_lines > 1: #user has requested context
             match_indicies = search_results.index
-            for i in match_indicies:
+            match_indicies = match_indicies.unique()
+            for i in match_indicies: 
                 base = max(0,i-self.historic_lines)
                 if base == i:
                     context = self.df["text"].iloc[i]
@@ -440,7 +442,8 @@ class ConcordanceTable:
         #Get Context
         if self.historic_lines != 1: #user has specified context
             history = self._get_history(search_results)
-            results_df["history"] = history.values
+            results_df = results_df.merge(history,on= 'text_id', how='left')
+            #results_df["history"] = history.values #lookup to cater for duplicate matches in a row
         else:
             results_df["history"] = results_df["left_context"] +  results_df["match"] + results_df["right_context"] #verbose for now - need a checkbox to suppress or show
         # Sort
