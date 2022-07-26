@@ -70,7 +70,7 @@ SEARCH_TABLE_TEMPLATE = """
     <thead>
         <tr>
             <th>Document ID</th>
-            <th>Result</th>
+            <th>Result / Context</th>
             <th/>
             <th/>
         </tr>
@@ -209,6 +209,9 @@ class ConcordanceWidget:
             step=1,
             description="Lines in Context:",
         )
+        focus_context_input = ipywidgets.Checkbox(
+            value=False, description="Focus on context", disabled=False
+        )
         page_input = ipywidgets.BoundedIntText(
             value=1,
             min=1,
@@ -236,6 +239,7 @@ class ConcordanceWidget:
                 "ignore_case": ignore_case_input,
                 "whole_word": whole_word_input,
                 "historic_lines": context_input,
+                "focus_context":focus_context_input,
                 "page": page_input,
                 "window_width": window_width_input,
                 "sort": sort_input,
@@ -277,7 +281,7 @@ class ConcordanceWidget:
             [regex_toggle_input, ignore_case_input, whole_word_input]
         )
         checkboxes.layout.justify_content = "flex-start"
-        number_inputs = ipywidgets.HBox([page_input, window_width_input,context_input])
+        number_inputs = ipywidgets.HBox([page_input, window_width_input])
         number_inputs.layout.justify_content = "flex-start"
         return ipywidgets.VBox(
             [
@@ -285,6 +289,8 @@ class ConcordanceWidget:
                 checkboxes,
                 number_inputs,
                 sort_input,
+                context_input,
+                focus_context_input,
                 export_controls,
                 output,
             ]
@@ -320,6 +326,7 @@ class ConcordanceTable:
         df: pd.DataFrame,
         keyword: str = "",
         historic_lines: int = 1,
+        focus_context:bool = False,
         regex: bool = False,
         ignore_case: bool = True,
         whole_word: bool = False,
@@ -336,6 +343,7 @@ class ConcordanceTable:
         self.window_width = window_width
         self.sort = sort
         self.historic_lines = historic_lines
+        self.focus_context = focus_context
         self.element_id = "atap_" + str(uuid.uuid4())
         self.css = SEARCH_CSS_TEMPLATE.format(element_id=self.element_id)
         
@@ -395,7 +403,7 @@ class ConcordanceTable:
                     context = self.df["text"].iloc[i]
                     history[i] = context
                 else:
-                    context = self.df["text"].iloc[base:i] 
+                    context = self.df["text"].iloc[base:(i+1)] #retrieves current match along with context 
                     collect = ""
                     for line in context: #Ugly way to reduce elements of series to one list
                         if len(collect) == 0: 
@@ -423,6 +431,8 @@ class ConcordanceTable:
             return list(matches)
 
         search_regex = self._get_search_regex()
+        if self.focus_context == True and self.historic_lines > 1: #focus on context shrinks match column so there is more room for context
+            self.window_width = 10
         search_results = self.df["spacy_doc"].apply(_get_matches)
         search_results = search_results.loc[search_results.map(len) > 0].explode()
         search_results.name = "match"
@@ -443,7 +453,6 @@ class ConcordanceTable:
         if self.historic_lines != 1: #user has specified context
             history = self._get_history(search_results)
             results_df = results_df.merge(history,on= 'text_id', how='left')
-            #results_df["history"] = history.values #lookup to cater for duplicate matches in a row
         else:
             results_df["history"] = results_df["left_context"] +  results_df["match"] + results_df["right_context"] #verbose for now - need a checkbox to suppress or show
         # Sort
