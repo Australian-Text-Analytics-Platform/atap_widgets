@@ -1,4 +1,4 @@
-nox==2022.1.7
+nox==2022.8.7
 # Currently (2021-11-10) there is a bug in newer versions of pyparsing that breaks
 #   requirement parsing
 pyparsing<4
