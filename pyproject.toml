@@ -16,6 +16,7 @@ classifiers = [
 
 [tool.poetry.urls]
 Changelog = "https://github.com/Australian-Text-Analytics-Platform/atap_widgets/releases"
+"Project homepage" = "https://www.atap.edu.au/"
 
 [tool.poetry.dependencies]
 python = ">=3.8,<3.11"
