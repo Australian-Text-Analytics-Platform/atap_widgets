@@ -9,9 +9,10 @@ homepage = "https://github.com/Australian-Text-Analytics-Platform/atap_widgets"
 repository = "https://github.com/Australian-Text-Analytics-Platform/atap_widgets"
 documentation = "https://atap_widgets.readthedocs.io"
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
 ]
 
 [tool.poetry.urls]
