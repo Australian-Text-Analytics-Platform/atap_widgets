@@ -32,9 +32,9 @@ jupyterlab = "^3.4"
 en-core-web-sm = {url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.4.0/en_core_web_sm-3.4.0-py3-none-any.whl"}
 pytest = "^7.0.1"
 coverage = {extras = ["toml"], version = "^6.4"}
-safety = "^1.10.3"
+safety = "^2.1.1"
 xdoctest = {extras = ["colors"], version = "^1.0.0"}
-sphinx = "^5.0"
+sphinx = "^5.1"
 sphinx-autobuild = "^2021.3.14"
 pre-commit = "^2.19.0"
 flake8 = "^4"
