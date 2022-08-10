@@ -32,6 +32,7 @@ atap_widgets
    :target: https://github.com/psf/black
    :alt: Black
 
+This package is part of the atap_ project.
 
 Features
 --------
@@ -57,6 +58,25 @@ You can install *atap_widgets* via pip_ from PyPI_:
 .. code:: console
 
    $ pip install atap_widgets
+
+Development
+------------
+
+This project uses poetry_ for dependency management and
+packaging. Please see the poetry_ docs for details.
+Dependencies are specified in ``pyproject.toml``.
+
+This repository is configured to automatically publish
+new releases to PyPI if you merge a pull request with
+an updated version number. That means to release
+a new version with new features/fixes, you should:
+
+* Create a branch
+* Perform your work on that branch
+* Update the package version, e.g. with ``poetry version patch`` or ``poetry version minor``
+* Commit the changes to ``pyproject.toml``
+* Create a pull request for the branch on GitHub
+* Merge the branch into ``main`` when you're ready to release
 
 
 Contributing
@@ -92,6 +112,8 @@ This project was generated from `@cjolowicz`_'s `Hypermodern Python Cookiecutter
 .. _Hypermodern Python Cookiecutter: https://github.com/cjolowicz/cookiecutter-hypermodern-python
 .. _file an issue: https://github.com/Australian-Text-Analytics-Platform/atap_widgets/issues
 .. _pip: https://pip.pypa.io/
+.. _poetry: https://python-poetry.org/
 .. github-only
 .. _Contributor Guide: CONTRIBUTING.rst
 .. _Usage: https://atap_widgets.readthedocs.io/en/latest/usage.html
+.. _atap: https://www.atap.edu.au/
