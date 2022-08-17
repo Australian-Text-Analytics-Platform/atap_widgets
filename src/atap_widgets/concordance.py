@@ -143,6 +143,62 @@ def prepare_text_df(
     output["spacy_doc"] = output["text"].map(language_model)
     return output
 
+class DataIngest():
+    #
+    """
+    Alternative to prepare_text_df that:
+        - loads either via csv or existing dataframe
+        - Splits data into chunks that are used for grouping
+    input:
+        chunk:  (Optional) int. Group text by chunks representing number of rows that feeds into individual spacy docs.
+        df_input: (Optional) Dataframe. Datframe where a column with "text" exists.
+        path: file path to a csv that will be read into a dataframe. Neccessary that there is column with "text"
+        type: type of underlying file to read. i.e. csv, txt or existing dataframe    
+    """ 
+    def __init__(self,path:str = "",type:str = "csv",chunk : int = 1,df_input = None) -> None:
+        self.file_location = path
+        self.type = type
+        self.chunk = chunk
+        self.df_input = df_input
+        self.data = self.read_data() #chunk iterator
+        self.grouped_data = self.process()
+        
+    def read_data(self):
+        """ Cater for different file types / structures
+        """
+        if self.type == "csv":
+            return pd.read_csv(self.file_location,chunksize = self.chunk)
+        elif self.type == "dataframe":
+            if self.df_input is not None: 
+                list_df = [self.df_input[i:i+self.chunk] for i in range(0,self.df_input.shape[0],self.chunk)]
+                iter_df = iter(list_df)
+                return iter_df # passthrough input dataframe as an iterable that can be chunked / split
+            else:
+                raise ValueError("type dataframe is enabled, but df_input is None ")
+
+    def process(self):
+
+        """ Interates over chunks to create a column for grouping
+        """
+        total = pd.DataFrame()
+        for i, df_chunk in enumerate(self.data):
+            new = df_chunk.copy()
+            new['chunk'] = i
+            total = pd.concat([total,new])
+        self.data = total
+        return total
+    
+    def get_grouped_data(self):
+        return self.group_by_chunk(self.grouped_data)
+    
+    def get_chunked_data(self):
+        return self.grouped_data 
+
+    def get_original_data(self):
+        return self.data
+
+    def group_by_chunk(self,df):
+        return df.groupby(['chunk'])['text'].apply(','.join).reset_index()
 
 class ConcordanceWidget:
     """

@@ -1,0 +1,14 @@
+Question: What is your favourite animal in Australia?
+Name 6: Kangaroos and koalas.
+
+Question: What is your favourite animal in Australia?
+Name 1: Wombats are my favourite.
+
+Question: What is your favourite animal in Australia?
+Name 10: I don’t know, but I know I don’t like any of the poisonous spiders and dangerous snakes!
+
+Question: What is your favourite food in Australia?
+Name 10: Tomatos for sure!
+
+Question: What is your favourite food in Australia?
+Name 6: I decline to answer that.
