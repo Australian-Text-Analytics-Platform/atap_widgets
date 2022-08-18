@@ -42,10 +42,6 @@ SEARCH_CSS_TEMPLATE = """
     text-align: left;
     padding-left: 0px;
 }}
-#{element_id} .atap.context.history {{ 
-    text-align: left;
-    padding-left: 0px;
-}}
 #{element_id}.search_table th {{
     text-align: left;
 }}
@@ -88,7 +84,6 @@ SEARCH_ROW_TEMPLATE = """
     <td class="atap context context_left">{left_context}</td>
     <td class="atap search_highlight">{match}</td>
     <td class="atap context context_right">{right_context}</td>
-    <td class="atap context history">{history}</td>
 </tr>
 """
 
@@ -146,7 +141,7 @@ def prepare_text_df(
 class DataIngest():
     #
     """
-    Alternative to prepare_text_df that:
+    Run before prepare_text_df. Caters for different datastructures, file types and enables grouping of text column by chunk input:
         - loads either via csv or existing dataframe
         - Splits data into chunks that are used for grouping
     input:
@@ -258,16 +253,6 @@ class ConcordanceWidget:
             disabled=False,
             style={"description_width": "initial"},
         )
-        context_input = ipywidgets.BoundedIntText(
-            value=0,
-            min=0,
-            max=10,
-            step=1,
-            description="Lines in Context:",
-        )
-        focus_context_input = ipywidgets.Checkbox(
-            value=False, description="Focus on context", disabled=False
-        )
         page_input = ipywidgets.BoundedIntText(
             value=1,
             min=1,
@@ -278,7 +263,8 @@ class ConcordanceWidget:
         window_width_input = ipywidgets.BoundedIntText(
             value=50,
             min=10,
-            step=1,
+            step=10,
+            max = 500,
             description="Window size (characters):",
             style={"description_width": "initial"},
         )
@@ -294,8 +280,6 @@ class ConcordanceWidget:
                 "regex": regex_toggle_input,
                 "ignore_case": ignore_case_input,
                 "whole_word": whole_word_input,
-                "historic_utterances": context_input,
-                "focus_context":focus_context_input,
                 "page": page_input,
                 "window_width": window_width_input,
                 "sort": sort_input,
@@ -345,8 +329,6 @@ class ConcordanceWidget:
                 checkboxes,
                 number_inputs,
                 sort_input,
-                context_input,
-                focus_context_input,
                 export_controls,
                 output,
             ]
@@ -381,8 +363,6 @@ class ConcordanceTable:
         self,
         df: pd.DataFrame,
         keyword: str = "",
-        historic_utterances: int = 1,
-        focus_context:bool = False,
         regex: bool = False,
         ignore_case: bool = True,
         whole_word: bool = False,
@@ -398,8 +378,6 @@ class ConcordanceTable:
         self.results_per_page = results_per_page
         self.window_width = window_width
         self.sort = sort
-        self.historic_utterances = historic_utterances
-        self.focus_context = focus_context
         self.element_id = "atap_" + str(uuid.uuid4())
         self.css = SEARCH_CSS_TEMPLATE.format(element_id=self.element_id)
         
@@ -443,41 +421,11 @@ class ConcordanceTable:
         except re.error:
             return False
 
-    def _get_history(self,search_results) -> pd.Series:
-        """ Given matches return historic context 
-        """
-        if self.historic_utterances < 1:
-            raise ValueError("historic_utterances must be positive integer")
-        history = dict()
-        
-        if self.historic_utterances > 1: #user has requested context
-            match_indicies = search_results.index
-            match_indicies = match_indicies.unique()
-            for i in match_indicies: 
-                base = max(0,i-self.historic_utterances)
-                if base == i:
-                    context = self.df["text"].iloc[i]
-                    history[i] = context
-                else:
-                    context = self.df["text"].iloc[base:(i+1)] #retrieves current match along with context 
-                    collect = ""
-                    for line in context: #Ugly way to reduce elements of series to one list
-                        if len(collect) == 0: 
-                            collect = collect + line
-                        else:
-                            collect = collect + " " + line
-                    context = collect
-                    history[i] = context     
-        history = pd.Series(history)
-        history.name = "history"
-        history.index.name = "text_id"
-        return history
-
     def _get_results(self) -> pd.DataFrame:
         """
         Return a Series of matches, with text_id as the index. Each element
         is a match returned by keyword_in_context(), i.e. a left_context,
-        match, right_context tuple. column for history also given with 1 line as default.
+        match, right_context tuple. 
         """
 
         def _get_matches(doc):
@@ -487,8 +435,6 @@ class ConcordanceTable:
             return list(matches)
 
         search_regex = self._get_search_regex()
-        if self.focus_context == True and self.historic_utterances > 1: #focus on context shrinks match column so there is more room for context
-            self.window_width = 10
         search_results = self.df["spacy_doc"].apply(_get_matches)
         search_results = search_results.loc[search_results.map(len) > 0].explode()
         search_results.name = "match"
@@ -505,20 +451,6 @@ class ConcordanceTable:
         results_df.reset_index(inplace=True)
         # Reorder columns
         results_df = results_df[["text_id", "left_context", "match", "right_context"]]
-        #Get Context
-        if self.historic_utterances > 1: #user has specified context
-            history = self._get_history(search_results)
-            results_df = results_df.merge(history,on= 'text_id', how='left')
-        elif self.historic_utterances == 0:
-            results_df["history"] = " " #trick pywidget into not showing history without altering css
-        elif self.historic_utterances < 0:
-            #negative context d
-            raise ValueError(
-                f"Invalid historic lines input  {self.historic_utterances}: should not be negative."
-            )
-
-        else:
-            results_df["history"] = results_df["left_context"] +  results_df["match"] + results_df["right_context"] 
         # Sort
         if self.sort == "text_id":
             results_df = results_df.sort_values(by="text_id")
