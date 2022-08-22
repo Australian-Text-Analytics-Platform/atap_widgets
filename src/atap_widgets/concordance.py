@@ -9,6 +9,9 @@ import pandas as pd
 import spacy
 from IPython.display import display
 from textacy.extract import keyword_in_context
+import dask.bag as db
+import re
+
 
 SEARCH_CSS_TEMPLATE = """
 <style>
@@ -150,11 +153,12 @@ class DataIngest():
         path: file path to a csv that will be read into a dataframe. Neccessary that there is column with "text"
         type: type of underlying file to read. i.e. csv, txt or existing dataframe    
     """ 
-    def __init__(self,path:str = "",type:str = "csv",chunk : int = 1,df_input = None) -> None:
+    def __init__(self,path:str = "",type:str = "csv",chunk : int = 1,df_input = None,re_symbol_txt = ":") -> None:
         self.file_location = path
         self.type = type
         self.chunk = chunk
         self.df_input = df_input
+        self.re_symbol_txt = re_symbol_txt
         self.data = self.read_data() #chunk iterator
         self.grouped_data = self.process()
         
@@ -164,12 +168,30 @@ class DataIngest():
         if self.type == "csv":
             return pd.read_csv(self.file_location,chunksize = self.chunk)
         elif self.type == "dataframe":
-            if self.df_input is not None: 
-                list_df = [self.df_input[i:i+self.chunk] for i in range(0,self.df_input.shape[0],self.chunk)]
-                iter_df = iter(list_df)
-                return iter_df # passthrough input dataframe as an iterable that can be chunked / split
-            else:
-                raise ValueError("type dataframe is enabled, but df_input is None ")
+            return self.chunk_a_dataframe(self.df_input)
+        elif self.type == "txt":
+            df = self.read_txt(self.re_symbol_txt)
+            return self.chunk_a_dataframe(df)
+
+    def chunk_a_dataframe(self,df):
+        if df is not None: 
+            list_df = [df[i:i+self.chunk] for i in range(0,df.shape[0],self.chunk)]
+            iter_df = iter(list_df)
+            return iter_df # passthrough input dataframe as an iterable that can be chunked / split
+        else:
+            raise ValueError("type dataframe is enabled, but df_input is None ")
+
+    def read_txt(self,split_by_regular_expression = ":"):
+        symbol = re.compile(split_by_regular_expression)
+        b = db.read_text(self.file_location).str.strip().str.split(symbol) #Split String by regular expression
+        b = b.filter(lambda r : len(r) > 1) 
+        def flatten(record):
+            return {
+                'text_id': record[0],
+                'text': record[1],
+            }
+        df = b.map(flatten).to_dataframe()
+        return(df.compute())
 
     def process(self):
 
