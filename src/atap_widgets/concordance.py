@@ -170,7 +170,7 @@ class DataIngest():
         elif self.type == "dataframe":
             return self.chunk_a_dataframe(self.df_input)
         elif self.type == "txt":
-            df = self.read_txt(self.re_symbol_txt)
+            df = self.read_txt()
             return self.chunk_a_dataframe(df)
 
     def chunk_a_dataframe(self,df):
@@ -181,17 +181,18 @@ class DataIngest():
         else:
             raise ValueError("type dataframe is enabled, but df_input is None ")
 
-    def read_txt(self,split_by_regular_expression = ":"):
-        symbol = re.compile(split_by_regular_expression)
-        b = db.read_text(self.file_location).str.strip().str.split(symbol) #Split String by regular expression
+    def read_txt(self):
+        #symbol = re.compile(self.re_symbol_txt)
+        #b = db.read_text(self.file_location).str.strip().str.split(symbol) #works in jupyter not here?
+        b = db.read_text(self.file_location).str.strip().str.split(self.re_symbol_txt)
         b = b.filter(lambda r : len(r) > 1) 
         def flatten(record):
             return {
                 'text_id': record[0],
                 'text': record[1],
             }
-        df = b.map(flatten).to_dataframe()
-        return(df.compute())
+        df = b.map(flatten).to_dataframe().compute()
+        return(df)
 
     def process(self):
 
