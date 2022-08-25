@@ -222,8 +222,8 @@ class DataIngest():
     def appify(self,language_model: Union[str, spacy.language.Language] = "en_core_web_sm"):
         data = self.get_grouped_data()
         prepared_df = prepare_text_df(data,language_model=language_model)
-        widget = ConcordanceWidget(prepared_df) #This works but try combine widget with pandas stlying
-        #widget = DataIngestWidget(prepared_df) #dev
+        #widget = ConcordanceWidget(prepared_df) #This works but try combine widget with pandas stlying
+        widget = DataIngestWidget(prepared_df) #dev
         widget.show()
         self.app = widget
         return widget
@@ -572,8 +572,8 @@ class ConcordanceTable:
         cell_hover = {  'selector': 'td:hover','props': [('background-color', '#ffffb3')]}
         index_names = {'selector': '.index_name','props': 'font-style: italic; color: darkgrey; font-weight:normal;'}
         headers = {'selector': 'th:not(.index_name)','props': 'background-color: #000066; color: white;'}
-        
-        return results.style.set_table_styles([cell_hover, index_names, headers])
+        html = results.style.set_table_styles([cell_hover, index_names, headers]).to_html()
+        return html
 
     def to_dataframe(self) -> pd.DataFrame:
         """
@@ -677,8 +677,8 @@ class DataIngestWidget:
             except NoResultsError:
                 n_pages = 1
 
-            print(html)
-            return html.style.render()
+            display(ipywidgets.HTML(html))
+            return html
 
         keyword_input = ipywidgets.Text(description="Keyword(s):")
         regex_toggle_input = ipywidgets.Checkbox(
