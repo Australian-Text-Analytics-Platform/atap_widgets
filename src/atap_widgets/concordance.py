@@ -161,6 +161,7 @@ class DataIngest():
         self.re_symbol_txt = re_symbol_txt
         self.data = self.read_data() #chunk iterator
         self.grouped_data = self.process()
+        self.app = None
         
     def read_data(self):
         """ Cater for different file types / structures
@@ -188,12 +189,12 @@ class DataIngest():
         b = b.filter(lambda r : len(r) > 1) 
         def flatten(record):
             return {
-                'text_id': record[0],
+                'person': record[0],
                 'text': record[1],
             }
         df = b.map(flatten).to_dataframe().compute()
         return(df)
-
+    
     def process(self):
 
         """ Interates over chunks to create a column for grouping
@@ -218,6 +219,27 @@ class DataIngest():
     def group_by_chunk(self,df):
         return df.groupby(['chunk'])['text'].apply(','.join).reset_index()
 
+    def appify(self,language_model: Union[str, spacy.language.Language] = "en_core_web_sm"):
+        data = self.get_grouped_data()
+        prepared_df = prepare_text_df(data,language_model=language_model)
+        widget = ConcordanceWidget(prepared_df) #This works but try combine widget with pandas stlying
+        #widget = DataIngestWidget(prepared_df) #dev
+        widget.show()
+        self.app = widget
+        return widget
+
+    def get_current_match_and_row(self,speaker_column = "TEST"):
+        #Gets current results from within widget
+        #Note if the data has been chunked row is the chunked row
+        try:
+            results = self.app.search_table.to_dataframe()
+            return results
+        except:
+            return None
+    def reference_original_data(results):
+        results.text_id
+        results.match
+        
 class ConcordanceWidget:
     """
     Interactive widget for searching and displaying concordance
@@ -528,6 +550,31 @@ class ConcordanceTable:
 
         return self._get_table_html(results, n_total=n_total)
 
+    def _get_html2(self, page: int = 1):
+        """ pandas styling equivalent
+        """
+        regex_valid = self.is_regex_valid()
+        if not regex_valid:
+            try:
+                self._get_search_regex()
+            except re.error as error:
+                return self._get_error_html(error)
+
+        start_index = (page - 1) * self.results_per_page
+        end_index = (page * self.results_per_page) - 1
+        try:
+            results = self._get_results()
+            n_total = len(results)
+            results = results.iloc[start_index:end_index]
+        except NoResultsError:
+            return "No results found. Try a different search term"
+
+        cell_hover = {  'selector': 'td:hover','props': [('background-color', '#ffffb3')]}
+        index_names = {'selector': '.index_name','props': 'font-style: italic; color: darkgrey; font-weight:normal;'}
+        headers = {'selector': 'th:not(.index_name)','props': 'background-color: #000066; color: white;'}
+        
+        return results.style.set_table_styles([cell_hover, index_names, headers])
+
     def to_dataframe(self) -> pd.DataFrame:
         """
         Return a dataframe returning all the matches for the current
@@ -589,3 +636,143 @@ class ConcordanceTable:
             raise ValueError(
                 "Invalid context option: should be 'left_context' or 'right_context'"
             )
+
+class DataIngestWidget:
+    """
+    New widget to go with pandas stlying approach
+    DOESNT WORK AT MOMENT
+    """
+
+    def __init__(self, df: pd.DataFrame, results_per_page: int = 20):
+        """
+        Args:
+            df: DataFrame containing texts, as returned by prepare_text_df()
+            results_per_page: How many search results to show at a time
+        """
+        self.data = df
+        self.results_per_page = results_per_page
+        self.search_table = ConcordanceTable(df=self.data)
+
+    def show(self):
+        """
+        Display the interactive widget
+        """
+
+        def display_results(page: int, **kwargs):
+            if not kwargs["keyword"]:
+                return None
+            for attr, value in kwargs.items():
+                setattr(self.search_table, attr, value)
+
+            try:
+                # CHANGE SOMEWHERE HERE!!!!
+                html = self.search_table._get_html2(page=page) #THIS IS HALF WRITE (attached to ConcordanceTable )
+                if self.search_table.is_regex_valid():
+                    results = self.search_table._get_results()
+                    # Need at least one page
+                    n_pages = max(
+                        self.search_table._get_total_pages(n_results=len(results)), 1
+                    )
+                    page_input.max = n_pages
+            except NoResultsError:
+                n_pages = 1
+
+            print(html)
+            return html.style.render()
+
+        keyword_input = ipywidgets.Text(description="Keyword(s):")
+        regex_toggle_input = ipywidgets.Checkbox(
+            value=False,
+            description="Enable regular expressions",
+            disabled=False,
+            style={"description_width": "initial"},
+        )
+        ignore_case_input = ipywidgets.Checkbox(
+            value=True, description="Ignore case", disabled=False
+        )
+        whole_word_input = ipywidgets.Checkbox(
+            value=False,
+            description="Match whole words",
+            disabled=False,
+            style={"description_width": "initial"},
+        )
+        page_input = ipywidgets.BoundedIntText(
+            value=1,
+            min=1,
+            max=1,
+            step=1,
+            description="Page:",
+        )
+        window_width_input = ipywidgets.BoundedIntText(
+            value=50,
+            min=10,
+            step=10,
+            max = 500,
+            description="Window size (characters):",
+            style={"description_width": "initial"},
+        )
+        sort_input = ipywidgets.Dropdown(
+            options=["text_id", "left_context", "right_context"],
+            value="text_id",
+            description="Sort by:",
+        )
+        output = ipywidgets.interactive_output(
+            display_results,
+            {
+                "keyword": keyword_input,
+                "regex": regex_toggle_input,
+                "ignore_case": ignore_case_input,
+                "whole_word": whole_word_input,
+                "page": page_input,
+                "window_width": window_width_input,
+                "sort": sort_input,
+            },
+        )
+        # Excel export
+        filename_input = ipywidgets.Text(
+            value="",
+            placeholder="Enter filename",
+            description="Filename (without.xlsx extension)",
+            style={"description_width": "initial"},
+            disabled=False,
+        )
+        export_button = ipywidgets.Button(
+            description="Export to Excel",
+            disabled=False,
+            button_style="success",
+            tooltip="The excel file will be saved to the same location as the "
+            "notebook on the server. Use the Jupyter Lab sidebar to access "
+            "and download it.",
+        )
+
+        def _export(widget):
+            filename = filename_input.value
+            # TODO: raise an error here?
+            if not filename:
+                return
+
+            if not filename.endswith(".xlsx"):
+                filename = filename + ".xlsx"
+
+            self.search_table.to_excel(filename)
+
+        export_button.on_click(_export)
+        export_controls = ipywidgets.HBox([filename_input, export_button])
+
+        # Set up layout of widgets
+        checkboxes = ipywidgets.HBox(
+            [regex_toggle_input, ignore_case_input, whole_word_input]
+        )
+        checkboxes.layout.justify_content = "flex-start"
+        number_inputs = ipywidgets.HBox([page_input, window_width_input])
+        number_inputs.layout.justify_content = "flex-start"
+        return ipywidgets.VBox(
+            [
+                keyword_input,
+                checkboxes,
+                number_inputs,
+                sort_input,
+                export_controls,
+                output,
+            ]
+        )
