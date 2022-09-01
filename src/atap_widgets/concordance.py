@@ -159,9 +159,11 @@ class DataIngest():
         self.chunk = chunk
         self.df_input = df_input
         self.re_symbol_txt = re_symbol_txt
-        self.data = self.read_data() #chunk iterator
+        self.data = self.read_data() #implement chunk iterator
         self.grouped_data = self.process()
+        self.largest_line_length = max(self.data.text.map(len)) # limitation : window size must be larger than largest in original data
         self.app = None
+        
         
     def read_data(self):
         """ Cater for different file types / structures
@@ -208,7 +210,7 @@ class DataIngest():
         return total
     
     def get_grouped_data(self):
-        return self.group_by_chunk(self.grouped_data)
+        return self.group_by_chunk(self.grouped_data) #maybe try returning multiindex?
     
     def get_chunked_data(self):
         return self.grouped_data 
@@ -217,13 +219,17 @@ class DataIngest():
         return self.data
 
     def group_by_chunk(self,df):
-        return df.groupby(['chunk'])['text'].apply(','.join).reset_index()
+        #add row number tags to original df
+        df['row'] = df.index
+        df['text'] = df['row'].astype(str).str.cat(df['text'],sep = "--") 
+        grouped = df.groupby(['chunk'])['text'].apply(''.join).reset_index()
+        return grouped
 
     def appify(self,language_model: Union[str, spacy.language.Language] = "en_core_web_sm"):
         data = self.get_grouped_data()
         prepared_df = prepare_text_df(data,language_model=language_model)
-        #widget = ConcordanceWidget(prepared_df) #This works but try combine widget with pandas stlying
-        widget = DataIngestWidget(prepared_df) #dev
+        #widget = ConcordanceWidget(prepared_df) # Using pywidget and css formatting
+        widget = DataIngestWidget(prepared_df,largest_line_length= self.largest_line_length) # Using pandas styling
         widget.show()
         self.app = widget
         return widget
@@ -236,9 +242,9 @@ class DataIngest():
             return results
         except:
             return None
-    def reference_original_data(results):
-        results.text_id
-        results.match
+#    def reference_original_data(results):
+#        results.text_id
+#        results.match
         
 class ConcordanceWidget:
     """
@@ -413,6 +419,7 @@ class ConcordanceTable:
         whole_word: bool = False,
         results_per_page: int = 20,
         window_width: int = 50,
+        stylingOn: bool = False,
         sort: str = "text_id"
     ):
         self.df = df
@@ -425,7 +432,7 @@ class ConcordanceTable:
         self.sort = sort
         self.element_id = "atap_" + str(uuid.uuid4())
         self.css = SEARCH_CSS_TEMPLATE.format(element_id=self.element_id)
-        
+        self.stylingOn = stylingOn
 
     def _repr_mimebundle_(self, include, exclude):
         """
@@ -496,6 +503,13 @@ class ConcordanceTable:
         results_df.reset_index(inplace=True)
         # Reorder columns
         results_df = results_df[["text_id", "left_context", "match", "right_context"]]
+        #New and Works
+        if self.stylingOn:
+        # Extract Line number tag from original un-grouped dataframe
+            results_df = results_df.assign(OriginalRow = results_df["left_context"].map(self._find_row_from_original_data))
+        #text_id should reflect line in original data, not chunk
+            results_df = (results_df[["OriginalRow","left_context","match","right_context"]]
+                        .rename(columns={"OriginalRow": "text_id"})) 
         # Sort
         if self.sort == "text_id":
             results_df = results_df.sort_values(by="text_id")
@@ -507,6 +521,16 @@ class ConcordanceTable:
                 " 'left_context' or 'right_context'"
             )
         return results_df
+
+    def _find_row_from_original_data(self,str_text):
+        """ Extract row number of original data based on "--number" pattern
+        """
+        pat = re.compile(r"\d+--")
+        #m = re.search(pat,str_text)
+        #row = str(m.group(0)).replace("--","")
+        row = re.findall(pat,str_text)[-1].replace("--","")
+        
+        return row
 
     def _get_total_pages(self, n_results: int) -> int:
         return math.ceil(n_results / self.results_per_page)
@@ -643,19 +667,20 @@ class DataIngestWidget:
     DOESNT WORK AT MOMENT
     """
 
-    def __init__(self, df: pd.DataFrame, results_per_page: int = 20):
+    def __init__(self, df: pd.DataFrame, results_per_page: int = 20, largest_line_length:int = 200):
         """
         Args:
             df: DataFrame containing texts, as returned by prepare_text_df()
             results_per_page: How many search results to show at a time
         """
         self.data = df
+        self.largest_line_length = largest_line_length
         self.results_per_page = results_per_page
-        self.search_table = ConcordanceTable(df=self.data)
+        self.search_table = ConcordanceTable(df=self.data,stylingOn = True)
 
     def show(self):
         """
-        Display the interactive widget
+        Display the interactive widget with pandas styling of the results from within ConcordanceTable
         """
 
         def display_results(page: int, **kwargs):
@@ -665,8 +690,7 @@ class DataIngestWidget:
                 setattr(self.search_table, attr, value)
 
             try:
-                # CHANGE SOMEWHERE HERE!!!!
-                html = self.search_table._get_html2(page=page) #THIS IS HALF WRITE (attached to ConcordanceTable )
+                html = self.search_table._get_html2(page=page) 
                 if self.search_table.is_regex_valid():
                     results = self.search_table._get_results()
                     # Need at least one page
@@ -704,10 +728,10 @@ class DataIngestWidget:
             description="Page:",
         )
         window_width_input = ipywidgets.BoundedIntText(
-            value=50,
-            min=10,
+            value=self.largest_line_length,
+            min=self.largest_line_length,
             step=10,
-            max = 500,
+            max = self.largest_line_length + 500,
             description="Window size (characters):",
             style={"description_width": "initial"},
         )

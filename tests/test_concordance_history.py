@@ -1,7 +1,7 @@
 import pandas as pd
 import spacy
-from atap_widgets.concordance import ConcordanceTable #when commiting
-#from src.atap_widgets.concordance import ConcordanceTable , DataIngest #for dev
+#from atap_widgets.concordance import ConcordanceTable #when commiting
+from src.atap_widgets.concordance import ConcordanceTable , DataIngest #for dev
 from atap_widgets.concordance import prepare_text_df
 import os
 
