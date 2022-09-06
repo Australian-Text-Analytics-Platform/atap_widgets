@@ -229,7 +229,7 @@ class DataIngest():
         data = self.get_grouped_data()
         prepared_df = prepare_text_df(data,language_model=language_model)
         #widget = ConcordanceWidget(prepared_df) # Using pywidget and css formatting
-        widget = DataIngestWidget(prepared_df,largest_line_length= self.largest_line_length) # Using pandas styling
+        widget = DataIngestWidget(prepared_df,self.data, largest_line_length= self.largest_line_length) # Using pandas styling
         widget.show()
         self.app = widget
         return widget
@@ -413,6 +413,7 @@ class ConcordanceTable:
     def __init__(
         self,
         df: pd.DataFrame,
+        ungrouped_data: pd.DataFrame = None,
         keyword: str = "",
         regex: bool = False,
         ignore_case: bool = True,
@@ -420,9 +421,11 @@ class ConcordanceTable:
         results_per_page: int = 20,
         window_width: int = 50,
         stylingOn: bool = False,
+        additional_info: str = None,
         sort: str = "text_id"
     ):
         self.df = df
+        self.ungrouped_data = ungrouped_data
         self.keyword = keyword
         self.regex = regex
         self.ignore_case = ignore_case
@@ -433,6 +436,7 @@ class ConcordanceTable:
         self.element_id = "atap_" + str(uuid.uuid4())
         self.css = SEARCH_CSS_TEMPLATE.format(element_id=self.element_id)
         self.stylingOn = stylingOn
+        self.additional_info = additional_info 
 
     def _repr_mimebundle_(self, include, exclude):
         """
@@ -509,7 +513,31 @@ class ConcordanceTable:
             results_df = results_df.assign(OriginalRow = results_df["left_context"].map(self._find_row_from_original_data))
         #text_id should reflect line in original data, not chunk
             results_df = (results_df[["OriginalRow","left_context","match","right_context"]]
-                        .rename(columns={"OriginalRow": "text_id"})) 
+                    #    .rename(columns={"OriginalRow": "index"})       #.....For Merge
+                        .assign(OriginalRow = results_df.OriginalRow.astype(int))) 
+        
+        
+        created_here = ["OriginalRow","text_id"] #text_id may exist already
+
+        #Additional column to bring in search, referencing ungrouped data
+        ungrouped_data = self.ungrouped_data.drop_duplicates()             
+        ungrouped_data.index.name = "OriginalRow"
+        ungrouped_data.reset_index(inplace=True) #text_id already exists
+        ungrouped_data = ungrouped_data.assign(OriginalRow = ungrouped_data.index.astype(int)) #..... For Merge
+    
+        #Merge current result with ungrouped data
+        merge_on = "OriginalRow"
+        ungrouped_data = ungrouped_data[[self.additional_info,merge_on]] #Subset only user selection and what is required for row merging
+        text_id_exist = any([True for col in ungrouped_data.columns if col in ["text_id"]])
+
+        if text_id_exist == False: #Assumption is text_id is sortable so if doenst exist create here
+            results_df = results_df.assign(text_id = results_df.OriginalRow) 
+
+        #print("ungrouped: ", ungrouped_data.columns)
+        #print("result_df",results_df.columns)
+
+        results_df = results_df.merge(ungrouped_data,how = "left",on = merge_on).rename({"OriginalRow":"row"})
+
         # Sort
         if self.sort == "text_id":
             results_df = results_df.sort_values(by="text_id")
@@ -596,7 +624,11 @@ class ConcordanceTable:
         cell_hover = {  'selector': 'td:hover','props': [('background-color', '#ffffb3')]}
         index_names = {'selector': '.index_name','props': 'font-style: italic; color: darkgrey; font-weight:normal;'}
         headers = {'selector': 'th:not(.index_name)','props': 'background-color: #000066; color: white;'}
-        html = results.style.set_table_styles([cell_hover, index_names, headers]).to_html()
+        align = {'selector': 'td', 'props': 'text-align: center; font-weight: bold;'}
+        centre = {'selector': 'th.col_heading', 'props': 'text-align: center;'}
+        html = (results.style.set_properties(**{'background-color': 'green'}, subset=['match'])
+                    .set_table_styles([cell_hover, index_names, headers,align,centre]).to_html()
+        )
         return html
 
     def to_dataframe(self) -> pd.DataFrame:
@@ -664,19 +696,19 @@ class ConcordanceTable:
 class DataIngestWidget:
     """
     New widget to go with pandas stlying approach
-    DOESNT WORK AT MOMENT
     """
 
-    def __init__(self, df: pd.DataFrame, results_per_page: int = 20, largest_line_length:int = 200):
+    def __init__(self, df: pd.DataFrame, ungrouped_data: pd.DataFrame,results_per_page: int = 20, largest_line_length:int = 200):
         """
         Args:
             df: DataFrame containing texts, as returned by prepare_text_df()
             results_per_page: How many search results to show at a time
         """
         self.data = df
+        self.ungrouped_data = ungrouped_data
         self.largest_line_length = largest_line_length
         self.results_per_page = results_per_page
-        self.search_table = ConcordanceTable(df=self.data,stylingOn = True)
+        self.search_table = ConcordanceTable(df=self.data,stylingOn = True,ungrouped_data = self.ungrouped_data)
 
     def show(self):
         """
@@ -740,6 +772,11 @@ class DataIngestWidget:
             value="text_id",
             description="Sort by:",
         )
+        additional_info = ipywidgets.Dropdown(
+            #options= self.ungrouped_data.columns,
+            options= [col for col in self.ungrouped_data.columns if col not in ["row","chunk","spacy_doc"]],
+            description="Additional popup info:",
+        )
         output = ipywidgets.interactive_output(
             display_results,
             {
@@ -750,6 +787,7 @@ class DataIngestWidget:
                 "page": page_input,
                 "window_width": window_width_input,
                 "sort": sort_input,
+                "additional_info":additional_info
             },
         )
         # Excel export
@@ -796,6 +834,7 @@ class DataIngestWidget:
                 checkboxes,
                 number_inputs,
                 sort_input,
+                additional_info,
                 export_controls,
                 output,
             ]
