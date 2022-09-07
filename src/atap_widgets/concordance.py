@@ -517,26 +517,15 @@ class ConcordanceTable:
                         .assign(OriginalRow = results_df.OriginalRow.astype(int))) 
         
         
-        created_here = ["OriginalRow","text_id"] #text_id may exist already
+        possibly_created_here = ["OriginalRow","text_id","row"] 
 
-        #Additional column to bring in search, referencing ungrouped data
-        ungrouped_data = self.ungrouped_data.drop_duplicates()             
-        ungrouped_data.index.name = "OriginalRow"
-        ungrouped_data.reset_index(inplace=True) #text_id already exists
-        ungrouped_data = ungrouped_data.assign(OriginalRow = ungrouped_data.index.astype(int)) #..... For Merge
-    
-        #Merge current result with ungrouped data
-        merge_on = "OriginalRow"
-        ungrouped_data = ungrouped_data[[self.additional_info,merge_on]] #Subset only user selection and what is required for row merging
-        text_id_exist = any([True for col in ungrouped_data.columns if col in ["text_id"]])
+        #Merge current result with ungrouped data if passed through via widget. Otherwise retain older ConcordanceTable functionality
+        if self.ungrouped_data is not None:
+            results_df = self._merge_with_ungrouped_data(results_df)
 
-        if text_id_exist == False: #Assumption is text_id is sortable so if doenst exist create here
-            results_df = results_df.assign(text_id = results_df.OriginalRow) 
+        #Cut-----     
 
-        #print("ungrouped: ", ungrouped_data.columns)
-        #print("result_df",results_df.columns)
-
-        results_df = results_df.merge(ungrouped_data,how = "left",on = merge_on).rename({"OriginalRow":"row"})
+        #Cut-----
 
         # Sort
         if self.sort == "text_id":
@@ -548,6 +537,25 @@ class ConcordanceTable:
                 f"Invalid sort value {self.sort}: should be 'text_id',"
                 " 'left_context' or 'right_context'"
             )
+        return results_df
+
+    def _merge_with_ungrouped_data(self,results_df):
+
+        merge_on = "OriginalRow"
+
+        #Add Additional column to bring in search, referencing ungrouped data
+        ungrouped_data = self.ungrouped_data.drop_duplicates()             
+        ungrouped_data.index.name = "OriginalRow"
+        ungrouped_data.reset_index(inplace=True) #text_id already exists
+        ungrouped_data = ungrouped_data.assign(OriginalRow = ungrouped_data.index.astype(int)) #..... For Merge
+        ungrouped_data = ungrouped_data[[self.additional_info,merge_on]] #Subset only user selection and what is required for row merging
+        
+        #handle issues if dataframe has already defined text_id as column
+        text_id_exist = any([True for col in ungrouped_data.columns if col in ["text_id"]])
+        if text_id_exist == False: #Assumption is text_id is sortable so if doenst exist create here
+            results_df = results_df.assign(text_id = results_df.OriginalRow) 
+        results_df = results_df.merge(ungrouped_data,how = "left",on = merge_on)
+        results_df = results_df.rename(columns = {"OriginalRow":"row"})
         return results_df
 
     def _find_row_from_original_data(self,str_text):
