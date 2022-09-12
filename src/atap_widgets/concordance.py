@@ -12,7 +12,6 @@ from textacy.extract import keyword_in_context
 import dask.bag as db
 import re
 
-
 SEARCH_CSS_TEMPLATE = """
 <style>
 #{element_id} table {{
@@ -521,12 +520,11 @@ class ConcordanceTable:
 
         #Merge current result with ungrouped data if passed through via widget. Otherwise retain older ConcordanceTable functionality
         if self.ungrouped_data is not None:
-            results_df = self._merge_with_ungrouped_data(results_df)
-
-        #Cut-----     
-
-        #Cut-----
-
+            if self.additional_info != "NotSet": #user can toggle off extra info for screen space
+                results_df = self._merge_with_ungrouped_data(results_df)
+            else: #make format similar as above case
+                results_df = results_df.assign(text_id = results_df.OriginalRow)
+                results_df = results_df.rename(columns = {"OriginalRow":"row"})
         # Sort
         if self.sort == "text_id":
             results_df = results_df.sort_values(by="text_id")
@@ -714,10 +712,15 @@ class DataIngestWidget:
         """
         self.data = df
         self.ungrouped_data = ungrouped_data
+        self.user_column_list = self._get_user_columns()
         self.largest_line_length = largest_line_length
         self.results_per_page = results_per_page
         self.search_table = ConcordanceTable(df=self.data,stylingOn = True,ungrouped_data = self.ungrouped_data)
 
+    def _get_user_columns(self):
+        user_column_list = [col for col in self.ungrouped_data.columns if col not in ["row","chunk","spacy_doc"]]
+        user_column_list.insert(0,"NotSet")
+        return user_column_list
     def show(self):
         """
         Display the interactive widget with pandas styling of the results from within ConcordanceTable
@@ -782,8 +785,8 @@ class DataIngestWidget:
         )
         additional_info = ipywidgets.Dropdown(
             #options= self.ungrouped_data.columns,
-            options= [col for col in self.ungrouped_data.columns if col not in ["row","chunk","spacy_doc"]],
-            description="Additional popup info:",
+            options=  self.user_column_list,
+            description="Show More Data:",
         )
         output = ipywidgets.interactive_output(
             display_results,
