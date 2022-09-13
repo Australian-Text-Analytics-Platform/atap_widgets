@@ -1,5 +1,6 @@
 import math
 import re
+from turtle import title
 from unittest import result
 import uuid
 from typing import Union
@@ -159,7 +160,8 @@ class DataIngest():
         self.df_input = df_input
         self.re_symbol_txt = re_symbol_txt
         self.data = self.read_data() #implement chunk iterator
-        self.grouped_data = self.process()
+        #self.grouped_data = self.process() #self.group_by_chunk(self.grouped_data) 
+        self.grouped_data = self.group_by_chunk(self.process())
         self.largest_line_length = max(self.data.text.map(len)) # limitation : window size must be larger than largest in original data
         self.app = None
         
@@ -209,8 +211,8 @@ class DataIngest():
         return total
     
     def get_grouped_data(self):
-        return self.group_by_chunk(self.grouped_data) #maybe try returning multiindex?
-    
+        #return self.group_by_chunk(self.grouped_data) 
+        return self.grouped_data
     def get_chunked_data(self):
         return self.grouped_data 
 
@@ -839,7 +841,7 @@ class DataIngestWidget:
         checkboxes.layout.justify_content = "flex-start"
         number_inputs = ipywidgets.HBox([page_input, window_width_input])
         number_inputs.layout.justify_content = "flex-start"
-        return ipywidgets.VBox(
+        final_widget = ipywidgets.VBox(
             [
                 keyword_input,
                 checkboxes,
@@ -850,3 +852,4 @@ class DataIngestWidget:
                 output,
             ]
         )
+        return display(final_widget)
