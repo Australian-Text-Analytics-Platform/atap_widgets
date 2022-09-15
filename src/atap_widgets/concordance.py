@@ -423,6 +423,7 @@ class ConcordanceTable:
         window_width: int = 50,
         stylingOn: bool = False,
         additional_info: str = None,
+        tag_lines : bool = True,
         sort: str = "text_id"
     ):
         self.df = df
@@ -438,6 +439,7 @@ class ConcordanceTable:
         self.css = SEARCH_CSS_TEMPLATE.format(element_id=self.element_id)
         self.stylingOn = stylingOn
         self.additional_info = additional_info 
+        self.tag_lines = tag_lines
 
     def _repr_mimebundle_(self, include, exclude):
         """
@@ -537,6 +539,10 @@ class ConcordanceTable:
                 f"Invalid sort value {self.sort}: should be 'text_id',"
                 " 'left_context' or 'right_context'"
             )
+        # strip unwanted tag lines if user requires
+        if self.tag_lines == False:
+            results_df = (results_df.assign(left_context = results_df.left_context.str.replace(r"\d+--","",regex=True))
+                            .assign( right_context = results_df.right_context.str.replace(r"\d+--","",regex=True)))
         return results_df
 
     def _merge_with_ungrouped_data(self,results_df):
@@ -562,8 +568,6 @@ class ConcordanceTable:
         """ Extract row number of original data based on "--number" pattern
         """
         pat = re.compile(r"\d+--")
-        #m = re.search(pat,str_text)
-        #row = str(m.group(0)).replace("--","")
         row = re.findall(pat,str_text)[-1].replace("--","")
         
         return row
@@ -785,6 +789,11 @@ class DataIngestWidget:
             value="text_id",
             description="Sort by:",
         )
+        tag_lines = ipywidgets.Dropdown(
+            options=[True, False],
+            value=True,
+            description="Tag lines:",
+        )
         additional_info = ipywidgets.Dropdown(
             #options= self.ungrouped_data.columns,
             options=  self.user_column_list,
@@ -800,7 +809,8 @@ class DataIngestWidget:
                 "page": page_input,
                 "window_width": window_width_input,
                 "sort": sort_input,
-                "additional_info":additional_info
+                "additional_info":additional_info,
+                "tag_lines":tag_lines
             },
         )
         # Excel export
@@ -849,6 +859,7 @@ class DataIngestWidget:
                 sort_input,
                 additional_info,
                 export_controls,
+                tag_lines,
                 output,
             ]
         )
