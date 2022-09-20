@@ -153,7 +153,7 @@ class DataIngest():
         path: file path to a csv that will be read into a dataframe. Neccessary that there is column with "text"
         type: type of underlying file to read. i.e. csv, txt or existing dataframe    
     """ 
-    def __init__(self,path:str = "",type:str = "csv",chunk : int = 1,df_input = None,re_symbol_txt = ":") -> None:
+    def __init__(self,path:str = "",type:str = "csv",chunk : int = 1,df_input = None,re_symbol_txt = None) -> None:
         self.file_location = path
         self.type = type
         self.chunk = chunk
@@ -186,16 +186,21 @@ class DataIngest():
             raise ValueError("type dataframe is enabled, but df_input is None ")
 
     def read_txt(self):
-        #symbol = re.compile(self.re_symbol_txt)
-        #b = db.read_text(self.file_location).str.strip().str.split(symbol) #works in jupyter not here?
-        b = db.read_text(self.file_location).str.strip().str.split(self.re_symbol_txt)
-        b = b.filter(lambda r : len(r) > 1) 
-        def flatten(record):
-            return {
-                'person': record[0],
-                'text': record[1],
-            }
-        df = b.map(flatten).to_dataframe().compute()
+        if self.re_symbol_txt is not None: #key symbol value structure
+            
+            b = db.read_text(self.file_location).str.strip().str.split(self.re_symbol_txt)
+            b = b.filter(lambda r : len(r) > 1) 
+            def flatten(record):
+                return {
+                    'key': record[0],
+                    'text': record[1],
+                }
+            df = b.map(flatten).to_dataframe().compute()
+        else: #just read without splitting and assume its all just text - no column structure
+            b = db.read_text(self.file_location).str.strip().filter(lambda r : len(r) > 1) 
+            df = b.to_dataframe().compute()
+            df.columns = ['text']
+            
         return(df)
     
     def process(self):
