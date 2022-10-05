@@ -12,6 +12,8 @@ from IPython.display import display
 from textacy.extract import keyword_in_context
 import dask.bag as db
 import re
+import collections
+import itertools
 
 SEARCH_CSS_TEMPLATE = """
 <style>
@@ -392,6 +394,36 @@ class ConcordanceWidget:
         )
 
 
+class ContextLines():
+    def __init__(self,pd_data,search_word,context_length = 10) -> None:
+        """ readslines of file and delivers dataframe with info on search matches
+            deliver is pd.DataFrame with columns:
+            line_no: line number in file of match
+            before: list of lines before line match 
+            line :  the line of text where a match occurs
+            after: list of lines after line match
+            deliver attribute set to None if no word matches found
+
+        """
+        self.pd_data = pd_data #pd.DataFrame with text column
+        self.search_word = search_word
+        self.count_matches = 0
+        self.length = context_length
+        self.result = self._propsed_alterative_find_row()
+        if self.count_matches > 0:
+            self.deliver = pd.DataFrame(list(self.result),columns = ['line_no','before','line','after'])
+        else:
+            self.deliver = None
+    def _propsed_alterative_find_row(self):
+        before = collections.deque(maxlen=self.length)
+        for line_no, line in enumerate(self.pd_data):
+            after = list()
+            if self.search_word in line:
+                self.count_matches = self.count_matches + 1
+                after = list(itertools.islice(self.data.text, line_no + 1,self.length + line_no + 1))
+                yield line_no, list(before), line, after
+            before.append(line)
+            
 class ConcordanceTable:
     """
     Search for matches in a text (using plain-text or regular expressions),
@@ -515,7 +547,9 @@ class ConcordanceTable:
         results_df.reset_index(inplace=True)
         # Reorder columns
         results_df = results_df[["text_id", "left_context", "match", "right_context"]]
-        #New and Works
+        
+        #Ancor ContextLines class to above #TODO integrate ------
+
         if self.stylingOn:
         # Extract Line number tag from original un-grouped dataframe
             results_df = results_df.assign(OriginalRow = results_df["left_context"].map(self._find_row_from_original_data))
@@ -524,7 +558,8 @@ class ConcordanceTable:
                     #    .rename(columns={"OriginalRow": "index"})       #.....For Merge
                         .assign(OriginalRow = results_df.OriginalRow.astype(int))) 
         
-        
+        #integrate------
+
         possibly_created_here = ["OriginalRow","text_id","row"] 
 
         #Merge current result with ungrouped data if passed through via widget. Otherwise retain older ConcordanceTable functionality
