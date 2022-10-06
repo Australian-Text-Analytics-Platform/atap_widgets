@@ -1,6 +1,6 @@
 import math
 import re
-from turtle import title
+from turtle import title, window_width
 from unittest import result
 import uuid
 from typing import Union
@@ -14,6 +14,9 @@ import dask.bag as db
 import re
 import collections
 import itertools
+
+#rather than each line in a Spacy doc object that is feed into textacy, True uses keyword_in_context with whole text in single doc object
+text_in_one_doc = True
 
 SEARCH_CSS_TEMPLATE = """
 <style>
@@ -140,7 +143,8 @@ def prepare_text_df(
 
     if isinstance(language_model, str):
         language_model = spacy.load(language_model)
-    output["spacy_doc"] = output["text"].map(language_model)
+    output["spacy_doc"] = output["text"].map(language_model) #Doc for each line
+    #output["spacy_doc"] = language_model(output.text.str.cat()) #text_in_one_doc Curious
     return output
 
 class DataIngest():
@@ -155,15 +159,16 @@ class DataIngest():
         path: file path to a csv that will be read into a dataframe. Neccessary that there is column with "text"
         type: type of underlying file to read. i.e. csv, txt or existing dataframe    
     """ 
-    def __init__(self,path:str = "",type:str = "csv",chunk : int = 1,df_input = None,re_symbol_txt = None) -> None:
+    def __init__(self,path:str = "",type:str = "csv",df_input = None,re_symbol_txt = None) -> None:
         self.file_location = path
         self.type = type
-        self.chunk = chunk
+        self.chunk = 1 #meaningless with the text in whole doc approach
         self.df_input = df_input
         self.re_symbol_txt = re_symbol_txt
         self.data = self.read_data() #implement chunk iterator
+        self.data = self.group_by_chunk(self.data) #add line tags
         #self.grouped_data = self.process() #self.group_by_chunk(self.grouped_data) 
-        self.grouped_data = self.group_by_chunk(self.process())
+#        self.grouped_data = self.group_by_chunk(self.process())
         self.largest_line_length = max(self.data.text.map(len)) # limitation : window size must be larger than largest in original data
         self.app = None
         
@@ -172,12 +177,15 @@ class DataIngest():
         """ Cater for different file types / structures
         """
         if self.type == "csv":
-            return pd.read_csv(self.file_location,chunksize = self.chunk)
+            #return pd.read_csv(self.file_location,chunksize = self.chunk)
+            return pd.read_csv(self.file_location)
         elif self.type == "dataframe":
-            return self.chunk_a_dataframe(self.df_input)
+            #return self.chunk_a_dataframe(self.df_input)
+            return self.df_input
         elif self.type == "txt":
             df = self.read_txt()
-            return self.chunk_a_dataframe(df)
+            #return self.chunk_a_dataframe(df)
+            return df
 
     def chunk_a_dataframe(self,df):
         if df is not None: 
@@ -217,11 +225,12 @@ class DataIngest():
         self.data = total
         return total
     
-    def get_grouped_data(self):
+#    def get_grouped_data(self):
         #return self.group_by_chunk(self.grouped_data) 
-        return self.grouped_data
-    def get_chunked_data(self):
-        return self.grouped_data 
+#        return self.grouped_data
+
+#    def get_chunked_data(self):
+#        return self.grouped_data 
 
     def get_original_data(self):
         return self.data
@@ -230,11 +239,11 @@ class DataIngest():
         #add row number tags to original df
         df['row'] = df.index
         df['text'] = df['row'].astype(str).str.cat(df['text'],sep = "--") 
-        grouped = df.groupby(['chunk'])['text'].apply(''.join).reset_index()
-        return grouped
+        #grouped = df.groupby(['chunk'])['text'].apply(''.join).reset_index()
+        return df
 
     def appify(self,language_model: Union[str, spacy.language.Language] = "en_core_web_sm"):
-        data = self.get_grouped_data()
+        data = self.data
         prepared_df = prepare_text_df(data,language_model=language_model)
         #widget = ConcordanceWidget(prepared_df) # Using pywidget and css formatting
         widget = DataIngestWidget(prepared_df,self.data, largest_line_length= self.largest_line_length) # Using pandas styling
@@ -323,7 +332,7 @@ class ConcordanceWidget:
             value=50,
             min=10,
             step=10,
-            max = 500,
+            max = 5000,
             description="Window size (characters):",
             style={"description_width": "initial"},
         )
@@ -460,7 +469,8 @@ class ConcordanceTable:
         window_width: int = 50,
         stylingOn: bool = False,
         additional_info: str = None,
-        tag_lines : bool = True,
+        tag_lines : bool = False,
+        language_model : str = "en_core_web_sm",
         sort: str = "text_id"
     ):
         self.df = df
@@ -477,6 +487,7 @@ class ConcordanceTable:
         self.stylingOn = stylingOn
         self.additional_info = additional_info 
         self.tag_lines = tag_lines
+        self.language_model = language_model
 
     def _repr_mimebundle_(self, include, exclude):
         """
@@ -524,32 +535,49 @@ class ConcordanceTable:
         match, right_context tuple. 
         """
 
-        def _get_matches(doc):
+        def _get_matches(doc,window_width=self.window_width):
             matches = keyword_in_context(
-                doc, keyword=search_regex, window_width=self.window_width
+                doc, keyword=search_regex, window_width= window_width
             )
             return list(matches)
 
         search_regex = self._get_search_regex()
-        search_results = self.df["spacy_doc"].apply(_get_matches)
-        search_results = search_results.loc[search_results.map(len) > 0].explode()
-        search_results.name = "match"
 
-        if len(search_results) == 0:
-            raise NoResultsError("No results found.")
+        if text_in_one_doc:
+            #put all text in one doc for keyword_in_context and use tags for line lookups
+            language_model = spacy.load(self.language_model)
+            seperate_doc = language_model(self.df.text.str.cat())
+            search_results = _get_matches(seperate_doc,5000) #start large to get tagged line - reset afterwards
+            results_df = pd.DataFrame(search_results,columns=["left_context", "match", "right_context"])
+            results_df.name = "match"
+            if len(results_df) == 0:
+                raise NoResultsError("No results found.")    
+            results_df.index.name = "text_id"
+            results_df.reset_index(inplace=True)
+            # Reorder columns
+            results_df = results_df[["text_id", "left_context", "match", "right_context"]]
 
-        results_df = search_results.to_frame()
-        # Use apply(pd.Series) to unpack nested lists into columns
-        results_df[["left_context", "match", "right_context"]] = results_df[
-            "match"
-        ].apply(pd.Series)
-        results_df.index.name = "text_id"
-        results_df.reset_index(inplace=True)
-        # Reorder columns
-        results_df = results_df[["text_id", "left_context", "match", "right_context"]]
+        else:
+            #original code where each line is a spacy doc
+            search_results = self.df["spacy_doc"].apply(_get_matches)
+            search_results = search_results.loc[search_results.map(len) > 0].explode()
+            search_results.name = "match"
+
+            if len(search_results) == 0:
+                raise NoResultsError("No results found.")
+
+            results_df = search_results.to_frame()
+            # Use apply(pd.Series) to unpack nested lists into columns
+            results_df[["left_context", "match", "right_context"]] = results_df[
+                "match"
+            ].apply(pd.Series)
+            results_df.index.name = "text_id"
+            results_df.reset_index(inplace=True)
+            # Reorder columns
+            results_df = results_df[["text_id", "left_context", "match", "right_context"]]
+            
+        #Ancor ContextLines class to above #TODO integrate ------ maybe not needed with all_in_one_doc approach
         
-        #Ancor ContextLines class to above #TODO integrate ------
-
         if self.stylingOn:
         # Extract Line number tag from original un-grouped dataframe
             results_df = results_df.assign(OriginalRow = results_df["left_context"].map(self._find_row_from_original_data))
@@ -558,7 +586,9 @@ class ConcordanceTable:
                     #    .rename(columns={"OriginalRow": "index"})       #.....For Merge
                         .assign(OriginalRow = results_df.OriginalRow.astype(int))) 
         
-        #integrate------
+        #shorten left and right manually to suit user input rather than what is needed to get line tag
+        results_df = results_df.assign(left_context = results_df.left_context.str[-self.window_width:], 
+                    right_context = results_df.right_context.str[:self.window_width])
 
         possibly_created_here = ["OriginalRow","text_id","row"] 
 
@@ -817,10 +847,14 @@ class DataIngestWidget:
             description="Page:",
         )
         window_width_input = ipywidgets.BoundedIntText(
+#            value=self.largest_line_length,
+#            min=self.largest_line_length,
+#            step=10,
+#            max = self.largest_line_length + 500,
             value=self.largest_line_length,
-            min=self.largest_line_length,
+            min = 10,
             step=10,
-            max = self.largest_line_length + 500,
+            max = 500,
             description="Window size (characters):",
             style={"description_width": "initial"},
         )
@@ -831,7 +865,7 @@ class DataIngestWidget:
         )
         tag_lines = ipywidgets.Dropdown(
             options=[True, False],
-            value=True,
+            value=False,
             description="Tag lines:",
         )
         additional_info = ipywidgets.Dropdown(

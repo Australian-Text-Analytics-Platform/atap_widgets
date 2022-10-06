@@ -8,8 +8,8 @@ import os
 def test_data_ingestion(sherlock_holmes_dummy_df):
     """ dataIngest should treat csv and dataframes equally
     """
-    DataDF = DataIngest(type = "dataframe",df_input = sherlock_holmes_dummy_df,chunk = 2)
+    DataDF = DataIngest(type = "dataframe",df_input = sherlock_holmes_dummy_df)
     df_df = DataDF.get_original_data()
-    DataCSV = DataIngest(type = "csv",path = "tests/data/sherlock_for_testing.csv",chunk = 2)
+    DataCSV = DataIngest(type = "csv",path = "tests/data/sherlock_for_testing.csv")
     df_csv = DataCSV.get_original_data()
     assert(pd.testing.assert_frame_equal(df_df, df_csv) == None)
