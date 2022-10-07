@@ -167,7 +167,7 @@ class DataIngest():
         if text_in_one_doc == False:
             self.data = self.read_data_if_chunking() 
             self.grouped_data = self.process() #Interates over chunks to create a column for grouping
-            self.grouped_data = self.group_by_chunk(self.grouped_data)
+            self.data = self.group_by_chunk(self.grouped_data) #was grouped_data
         else:
             self.data = self.read_data() 
             self.data = self.tag_data(self.data) #add line tags
@@ -260,7 +260,8 @@ class DataIngest():
         df['row'] = df.index
         df['text'] = df['row'].astype(str).str.cat(df['text'],sep = "--") 
         grouped = df.groupby(['chunk'])['text'].apply(''.join).reset_index()
-        return df
+        return grouped
+
     def appify(self,language_model: Union[str, spacy.language.Language] = "en_core_web_sm"):
         data = self.data
         prepared_df = prepare_text_df(data,language_model=language_model)
@@ -804,7 +805,7 @@ class DataIngestWidget:
             df: DataFrame containing texts, as returned by prepare_text_df()
             results_per_page: How many search results to show at a time
         """
-        self.data = df
+        self.data = df #prepted df
         self.ungrouped_data = ungrouped_data
         self.user_column_list = self._get_user_columns()
         self.largest_line_length = largest_line_length
