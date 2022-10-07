@@ -167,6 +167,7 @@ class DataIngest():
         if text_in_one_doc == False:
             self.data = self.read_data_if_chunking() 
             self.grouped_data = self.process() #Interates over chunks to create a column for grouping
+            self.ungrouped_data = self.grouped_data
             self.data = self.group_by_chunk(self.grouped_data) #was grouped_data
         else:
             self.data = self.read_data() 
@@ -174,7 +175,7 @@ class DataIngest():
 
         self.largest_line_length = max(self.data.text.map(len)) # limitation : window size must be larger than largest in original data
         self.app = None
-        
+         
         
     def read_data(self):
         """ Cater for different file types / structures
@@ -263,10 +264,12 @@ class DataIngest():
         return grouped
 
     def appify(self,language_model: Union[str, spacy.language.Language] = "en_core_web_sm"):
-        data = self.data
-        prepared_df = prepare_text_df(data,language_model=language_model)
+       # data =  #should be grouped
+    
+        prepared_df = prepare_text_df(self.data,language_model=language_model)
         #widget = ConcordanceWidget(prepared_df) # Using pywidget and css formatting
-        widget = DataIngestWidget(prepared_df,self.data, largest_line_length= self.largest_line_length) # Using pandas styling
+        #widget = DataIngestWidget(prepared_df,self.data, largest_line_length= self.largest_line_length) # Using pandas styling
+        widget = DataIngestWidget(prepared_df,self.ungrouped_data, largest_line_length= self.largest_line_length) # Using pandas styling
         widget.show()
         self.app = widget
         return widget
@@ -805,7 +808,7 @@ class DataIngestWidget:
             df: DataFrame containing texts, as returned by prepare_text_df()
             results_per_page: How many search results to show at a time
         """
-        self.data = df #prepted df
+        self.data = df #prepped df 
         self.ungrouped_data = ungrouped_data
         self.user_column_list = self._get_user_columns()
         self.largest_line_length = largest_line_length
