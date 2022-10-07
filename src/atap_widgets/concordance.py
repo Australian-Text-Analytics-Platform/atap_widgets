@@ -16,7 +16,7 @@ import collections
 import itertools
 
 #rather than each line in a Spacy doc object that is feed into textacy, True uses keyword_in_context with whole text in single doc object
-text_in_one_doc = True
+text_in_one_doc = False #False is best for perfomance - maybe True case is redundant now
 
 SEARCH_CSS_TEMPLATE = """
 <style>
@@ -144,11 +144,10 @@ def prepare_text_df(
     if isinstance(language_model, str):
         language_model = spacy.load(language_model)
     output["spacy_doc"] = output["text"].map(language_model) #Doc for each line
-    #output["spacy_doc"] = language_model(output.text.str.cat()) #text_in_one_doc Curious
+    
     return output
 
 class DataIngest():
-    #
     """
     Run before prepare_text_df. Caters for different datastructures, file types and enables grouping of text column by chunk input:
         - loads either via csv or existing dataframe
@@ -159,16 +158,20 @@ class DataIngest():
         path: file path to a csv that will be read into a dataframe. Neccessary that there is column with "text"
         type: type of underlying file to read. i.e. csv, txt or existing dataframe    
     """ 
-    def __init__(self,path:str = "",type:str = "csv",df_input = None,re_symbol_txt = None) -> None:
+    def __init__(self,path:str = "",type:str = "csv",df_input = None,re_symbol_txt = None,chunk = 1) -> None:
         self.file_location = path
         self.type = type
-        self.chunk = 1 #meaningless with the text in whole doc approach
+        self.chunk = chunk # text_in_one_doc True needs to be associated with chunk = 1 
         self.df_input = df_input
         self.re_symbol_txt = re_symbol_txt
-        self.data = self.read_data() #implement chunk iterator
-        self.data = self.group_by_chunk(self.data) #add line tags
-        #self.grouped_data = self.process() #self.group_by_chunk(self.grouped_data) 
-#        self.grouped_data = self.group_by_chunk(self.process())
+        if text_in_one_doc == False:
+            self.data = self.read_data_if_chunking() 
+            self.grouped_data = self.process() #Interates over chunks to create a column for grouping
+            self.grouped_data = self.group_by_chunk(self.grouped_data)
+        else:
+            self.data = self.read_data() 
+            self.data = self.tag_data(self.data) #add line tags
+
         self.largest_line_length = max(self.data.text.map(len)) # limitation : window size must be larger than largest in original data
         self.app = None
         
@@ -177,15 +180,23 @@ class DataIngest():
         """ Cater for different file types / structures
         """
         if self.type == "csv":
-            #return pd.read_csv(self.file_location,chunksize = self.chunk)
             return pd.read_csv(self.file_location)
         elif self.type == "dataframe":
-            #return self.chunk_a_dataframe(self.df_input)
             return self.df_input
         elif self.type == "txt":
             df = self.read_txt()
-            #return self.chunk_a_dataframe(df)
             return df
+
+    def read_data_if_chunking(self):
+        """ read_data equivalent for chunking
+        """
+        if self.type == "csv":
+            return pd.read_csv(self.file_location,chunksize = self.chunk)
+        elif self.type == "dataframe":
+            return self.chunk_a_dataframe(self.df_input)
+        elif self.type == "txt":
+            df = self.read_txt()
+            return self.chunk_a_dataframe(df)
 
     def chunk_a_dataframe(self,df):
         if df is not None: 
@@ -214,7 +225,6 @@ class DataIngest():
         return(df)
     
     def process(self):
-
         """ Interates over chunks to create a column for grouping
         """
         total = pd.DataFrame()
@@ -225,7 +235,11 @@ class DataIngest():
         self.data = total
         return total
     
-#    def get_grouped_data(self):
+    def get_grouped_data(self):
+        if text_in_one_doc == False:
+            return self.grouped_data
+        else:
+            return None
         #return self.group_by_chunk(self.grouped_data) 
 #        return self.grouped_data
 
@@ -235,13 +249,18 @@ class DataIngest():
     def get_original_data(self):
         return self.data
 
-    def group_by_chunk(self,df):
+    def tag_data(self,df):
         #add row number tags to original df
         df['row'] = df.index
         df['text'] = df['row'].astype(str).str.cat(df['text'],sep = "--") 
-        #grouped = df.groupby(['chunk'])['text'].apply(''.join).reset_index()
         return df
 
+    def group_by_chunk(self,df):
+        #add row number tags to original df and chunk
+        df['row'] = df.index
+        df['text'] = df['row'].astype(str).str.cat(df['text'],sep = "--") 
+        grouped = df.groupby(['chunk'])['text'].apply(''.join).reset_index()
+        return df
     def appify(self,language_model: Union[str, spacy.language.Language] = "en_core_web_sm"):
         data = self.data
         prepared_df = prepare_text_df(data,language_model=language_model)
@@ -259,9 +278,7 @@ class DataIngest():
             return results
         except:
             return None
-#    def reference_original_data(results):
-#        results.text_id
-#        results.match
+
         
 class ConcordanceWidget:
     """
@@ -535,7 +552,7 @@ class ConcordanceTable:
         match, right_context tuple. 
         """
 
-        def _get_matches(doc,window_width=self.window_width):
+        def _get_matches(doc,window_width=5000):
             matches = keyword_in_context(
                 doc, keyword=search_regex, window_width= window_width
             )
@@ -547,7 +564,7 @@ class ConcordanceTable:
             #put all text in one doc for keyword_in_context and use tags for line lookups
             language_model = spacy.load(self.language_model)
             seperate_doc = language_model(self.df.text.str.cat())
-            search_results = _get_matches(seperate_doc,5000) #start large to get tagged line - reset afterwards
+            search_results = _get_matches(seperate_doc) #start large to get tagged line - reset afterwards
             results_df = pd.DataFrame(search_results,columns=["left_context", "match", "right_context"])
             results_df.name = "match"
             if len(results_df) == 0:
@@ -576,17 +593,18 @@ class ConcordanceTable:
             # Reorder columns
             results_df = results_df[["text_id", "left_context", "match", "right_context"]]
             
-        #Ancor ContextLines class to above #TODO integrate ------ maybe not needed with all_in_one_doc approach
+        #Could Ancor ContextLines somewhere here if the class is properly integrated
         
         if self.stylingOn:
         # Extract Line number tag from original un-grouped dataframe
             results_df = results_df.assign(OriginalRow = results_df["left_context"].map(self._find_row_from_original_data))
-        #text_id should reflect line in original data, not chunk
+        #text_id should reflect line in original data
             results_df = (results_df[["OriginalRow","left_context","match","right_context"]]
-                    #    .rename(columns={"OriginalRow": "index"})       #.....For Merge
                         .assign(OriginalRow = results_df.OriginalRow.astype(int))) 
         
-        #shorten left and right manually to suit user input rather than what is needed to get line tag
+        #shorten left and right context artificially  to suit user input rather. 
+        # Under the hood it is set at 2000, long enough. Needs to be increased if line lengths greater than this
+        # So line tags work and get row numbers
         results_df = results_df.assign(left_context = results_df.left_context.str[-self.window_width:], 
                     right_context = results_df.right_context.str[:self.window_width])
 
@@ -847,10 +865,6 @@ class DataIngestWidget:
             description="Page:",
         )
         window_width_input = ipywidgets.BoundedIntText(
-#            value=self.largest_line_length,
-#            min=self.largest_line_length,
-#            step=10,
-#            max = self.largest_line_length + 500,
             value=self.largest_line_length,
             min = 10,
             step=10,
@@ -869,7 +883,6 @@ class DataIngestWidget:
             description="Tag lines:",
         )
         additional_info = ipywidgets.Dropdown(
-            #options= self.ungrouped_data.columns,
             options=  self.user_column_list,
             description="Show More Data:",
         )
