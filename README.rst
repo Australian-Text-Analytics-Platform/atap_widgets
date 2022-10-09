@@ -58,6 +58,8 @@ You can install *atap_widgets* via pip_ from PyPI_:
 .. code:: console
 
    $ pip install atap_widgets
+   
+**NOTE**: on M1 Macs with the new Apple Silicon chip, you may need a Rust compiler installed. Rust can be installed with a single command via [rustup.rs](https://rustup.rs/)
 
 Development
 ------------
