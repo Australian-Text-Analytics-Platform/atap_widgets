@@ -25,6 +25,7 @@ pandas = "^1.3"
 xlsxwriter = "^3.0.2"
 spacy = "^3.1"
 textacy = "*"
+dask = {version = "^2022.9.2", extras = ["dataframe"]}
 sentence-transformers = "^2.1.0"
 
 [tool.poetry.dev-dependencies]
