@@ -147,7 +147,7 @@ def prepare_text_df(
     
     return output
 
-class DataIngest():
+class ConcordanceLoader():
     """
     Run before prepare_text_df. Caters for different datastructures, file types and enables grouping of text column by chunk input:
         - loads either via csv or existing dataframe
@@ -263,13 +263,9 @@ class DataIngest():
         grouped = df.groupby(['chunk'])['text'].apply(''.join).reset_index()
         return grouped
 
-    def appify(self,language_model: Union[str, spacy.language.Language] = "en_core_web_sm"):
-       # data =  #should be grouped
-    
+    def show(self,language_model: Union[str, spacy.language.Language] = "en_core_web_sm"):
         prepared_df = prepare_text_df(self.data,language_model=language_model)
-        #widget = ConcordanceWidget(prepared_df) # Using pywidget and css formatting
-        #widget = DataIngestWidget(prepared_df,self.data, largest_line_length= self.largest_line_length) # Using pandas styling
-        widget = DataIngestWidget(prepared_df,self.ungrouped_data, largest_line_length= self.largest_line_length) # Using pandas styling
+        widget = ConcordanceLoaderWidget(prepared_df,self.ungrouped_data, largest_line_length= self.largest_line_length) # Using pandas styling
         widget.show()
         self.app = widget
         return widget
@@ -725,14 +721,30 @@ class ConcordanceTable:
         except NoResultsError:
             return "No results found. Try a different search term"
 
-        cell_hover = {  'selector': 'td:hover','props': [('background-color', '#ffffb3')]}
-        index_names = {'selector': '.index_name','props': 'font-style: italic; color: darkgrey; font-weight:normal;'}
-        headers = {'selector': 'th:not(.index_name)','props': 'background-color: #000066; color: white;'}
-        align = {'selector': 'td', 'props': 'text-align: center; font-weight: bold;'}
+        # Marius suggestions for improved style
+        cell_hover = {'selector': 'td:hover', 'props': [('background-color', '#ffffb3')]}
+        index_names = {'selector': '.index_name', 'props': 'font-style: italic; color: darkgrey; font-weight:normal;'}
+        headers = {'selector': 'th:not(.index_name)', 'props': 'background-color: #000066; color: white;'}
+        align = {'selector': 'td', 'props': 'font-weight: bold;'}
         centre = {'selector': 'th.col_heading', 'props': 'text-align: center;'}
-        html = (results.style.set_properties(**{'background-color': 'green'}, subset=['match'])
-                    .set_table_styles([cell_hover, index_names, headers,align,centre]).to_html()
+        odd_rows = {"selector": "tbody tr:nth-child(odd)", "props": "background-color: #f9f9f9"}
+        even_rows = {"selector": "tbody tr:nth-child(even)", "props": "background-color: #dddddd"}
+        column_styles = {
+            "match": [{"selector": "td",
+                       "props": [("background-color", "#99CC99"), ("text-align", "center"), ("padding-left", "0px"),
+                                 ("padding-right", "0px")]}],
+            "left_context": [{"selector": "td",
+                              "props": [("text-align", "right"), ("padding-right", "0px")]}],
+            "right_context": [{"selector": "td",
+                               "props": [("text-align", "left"), ("padding-left", "0px")]}],
+        }
+        html = (
+            results.style
+            .set_table_styles(column_styles)
+            .set_table_styles([cell_hover, index_names, headers, align, centre, odd_rows, even_rows], overwrite=False)
+            .to_html()
         )
+
         return html
 
     def to_dataframe(self) -> pd.DataFrame:
@@ -797,7 +809,7 @@ class ConcordanceTable:
                 "Invalid context option: should be 'left_context' or 'right_context'"
             )
 
-class DataIngestWidget:
+class ConcordanceLoaderWidget:
     """
     New widget to go with pandas stlying approach
     """
@@ -869,9 +881,9 @@ class DataIngestWidget:
             description="Page:",
         )
         window_width_input = ipywidgets.BoundedIntText(
-            value=self.largest_line_length,
+            value = 50,
             min = 10,
-            step=10,
+            step=1,
             max = 500,
             description="Window size (characters):",
             style={"description_width": "initial"},
