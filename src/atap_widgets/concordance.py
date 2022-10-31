@@ -686,7 +686,14 @@ class ConcordanceTable:
                 right_context=results_df.right_context.str.replace(
                     r"\d+--", "", regex=True
                 )
+            ) #if showMore brings in original text and tag_lines set to hide tags:
+            if "text" in results_df.columns:
+                results_df = results_df.assign(
+                text=results_df.text.str.replace(
+                    r"\d+--", "", regex=True
+                )
             )
+
         if "row" in results_df.columns:
             results_df = results_df.drop(columns=["row"])  # clean
         return results_df
