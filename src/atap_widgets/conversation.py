@@ -11,12 +11,10 @@ from typing import Union
 
 import numpy as np
 import pandas as pd
-import sentence_transformers
 import spacy
 import textacy
 from cytoolz.itertoolz import concat
 from cytoolz.itertoolz import sliding_window
-from sentence_transformers import SentenceTransformer
 from sklearn.metrics import pairwise
 from textacy.representations import matrix_utils
 from textacy.representations.vectorizers import Vectorizer
@@ -333,6 +331,34 @@ class Conversation:
             recurrence[text_id] = score
 
         return recurrence
+
+    def get_conceptual_recurrence_rate(self, similarity: pd.DataFrame) -> float:
+        """
+        Calculate the overall conceptual recurrence rate for the conversation.
+
+        See https://doi.org/10.1063/1.5024809
+
+        See `Conversation.get_grouped_recurrence()` for the person-to-person
+        and group-to-group metrics which are related to this
+
+        Args:
+            similarity: A matrix of similarity scores for the conversation.
+
+        Returns:
+            Conceptual recurrence rate, a single value.
+        """
+        if self.n_utterances < 2:
+            raise ValueError(
+                "Can't calculate recurrence rate for a conversation with less than 2 utterances"
+            )
+        # Note: this calculation works out to the mean of the upper triangle
+        # (excluding main diagonal). Leaving it as is as it corresponds
+        # well to the formula, could maybe be optimized using the mean
+        similarity_upper = pd.DataFrame(
+            np.triu(similarity, k=1), index=similarity.index, columns=similarity.columns
+        )
+        normalization_factor = 2 / (self.n_utterances * (self.n_utterances - 1))
+        return similarity_upper.sum().sum() * normalization_factor
 
     def get_grouped_recurrence(
         self,
@@ -778,13 +804,34 @@ class ConceptSimilarityModel(BaseSimilarityModel):
 
 
 class EmbeddingModel:
+    """
+    Model that uses sentence embeddings from the RoBERTa model
+    to calculate similarity.
+
+    Requires the sentence_transformers package to be installed,
+    this is optional as it's a fairly heavy dependency.
+    """
+
     def __init__(
         self, conversation: Conversation, model_name: str = "stsb-roberta-base-v2"
     ):
+        try:
+            from sentence_transformers import SentenceTransformer
+        except ImportError as error:
+            print(
+                """
+            sentence_transformers package does not seem to be installed.
+            sentence_transformers is an optional dependency, please
+            install it via conda or pip
+            """
+            )
+            raise error
         self.conversation = conversation
         self.model = SentenceTransformer(model_name)
 
     def get_conversation_similarity(self):
+        import sentence_transformers
+
         encoding = self.model.encode(self.conversation.data["text"])
         similarity = sentence_transformers.util.pytorch_cos_sim(encoding, encoding)
         return pd.DataFrame(

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "atap_widgets"
-version = "0.2.23"
+version = "0.4.0"
 description = "Interactive widgets used by the Australian Text Analytics Platform"
 authors = ["Marius Mather <marius.mather@sydney.edu.au>"]
 license = "MIT"
@@ -9,38 +9,44 @@ homepage = "https://github.com/Australian-Text-Analytics-Platform/atap_widgets"
 repository = "https://github.com/Australian-Text-Analytics-Platform/atap_widgets"
 documentation = "https://atap_widgets.readthedocs.io"
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
 ]
 
 [tool.poetry.urls]
 Changelog = "https://github.com/Australian-Text-Analytics-Platform/atap_widgets/releases"
+"Project homepage" = "https://www.atap.edu.au/"
 
 [tool.poetry.dependencies]
 python = ">=3.8,<3.11"
-ipywidgets = "^7.6"
-bokeh = "^2.4"
+ipywidgets = "^8.0"
+bokeh = "^2.0"
 pandas = "^1.3"
-xlsxwriter = "^3.0.2"
-spacy = "^3.1"
+spacy = "^3.0"
+xlsxwriter = "^3"
 textacy = "*"
 dask = {version = "^2022.9.2", extras = ["dataframe"]}
-sentence-transformers = "^2.1.0"
 
 [tool.poetry.dev-dependencies]
+sentence-transformers = "^2.1.0"
+# Torch is needed for sentence-transformers
+# Newer versions of torch causing issues on M1 Mac
+torch = "1.12.1"
 jupyterlab = "^3.4"
-en-core-web-sm = {url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.1.0/en_core_web_sm-3.1.0-py3-none-any.whl"}
+en-core-web-sm = {url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.4.0/en_core_web_sm-3.4.0-py3-none-any.whl"}
 pytest = "^7.0.1"
 coverage = {extras = ["toml"], version = "^6.4"}
-safety = "^1.10.3"
+safety = "^2.1.1"
 xdoctest = {extras = ["colors"], version = "^1.0.0"}
-sphinx = "^5.0"
+sphinx = "^5.1"
 sphinx-autobuild = "^2021.3.14"
 pre-commit = "^2.19.0"
-flake8 = "^4"
+flake8 = "^5"
 black = "^22.1"
-flake8-bandit = "^3.0"
+flake8-bandit = "^4.1"
 flake8-bugbear = "^22.6.22"
 flake8-docstrings = "^1.6.0"
 flake8-rst-docstrings = "^0.2.5"
