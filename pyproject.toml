@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "atap_widgets"
-version = "0.4.0"
+version = "0.5.0"
 description = "Interactive widgets used by the Australian Text Analytics Platform"
 authors = ["Marius Mather <marius.mather@sydney.edu.au>"]
 license = "MIT"
