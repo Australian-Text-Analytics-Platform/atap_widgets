@@ -1,10 +1,13 @@
+import os
+
 import pandas as pd
 import spacy
+from src.atap_widgets.concordance import ConcordanceLoader
+from src.atap_widgets.concordance import ConcordanceTable
+
+from atap_widgets.concordance import prepare_text_df
 
 # from atap_widgets.concordance import ConcordanceTable #when commiting
-from src.atap_widgets.concordance import ConcordanceTable, ConcordanceLoader  # for dev
-from atap_widgets.concordance import prepare_text_df
-import os
 
 
 def test_data_ingestion(sherlock_holmes_dummy_df):
