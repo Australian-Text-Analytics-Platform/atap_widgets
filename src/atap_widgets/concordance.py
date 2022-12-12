@@ -1,24 +1,17 @@
+import collections
+import itertools
 import math
 import re
-from turtle import title, window_width
-from unittest import result
 import uuid
 from typing import Union
 
+import dask.bag as db
 import ipywidgets
 import pandas as pd
 import spacy
 from IPython.display import display
 from textacy.extract import keyword_in_context
-import dask.bag as db
-import re
-import collections
-import itertools
 
-# rather than each line in a Spacy doc object that is feed into textacy, True uses keyword_in_context with whole text in single doc object
-text_in_one_doc = (
-    False  # False is best for perfomance - maybe True case is redundant now
-)
 
 SEARCH_CSS_TEMPLATE = """
 <style>
@@ -152,13 +145,20 @@ def prepare_text_df(
 
 class ConcordanceLoader:
     """
-    Run before prepare_text_df. Caters for different datastructures, file types and enables grouping of text column by chunk input:
-        - loads either via csv or existing dataframe
-        - Splits data into chunks that are used for grouping
-    input:
-        chunk:  (Optional) int. Group text by chunks representing number of rows that feeds into individual spacy docs.
-        df_input: (Optional) Dataframe. Datframe where a column with "text" exists.
-        path: file path to a csv that will be read into a dataframe. Neccessary that there is column with "text"
+    File reader that can load multiple data formats for use in Concordance.
+
+    Run before prepare_text_df. Caters for different datastructures, file types and enables
+    grouping of text column by chunk input:
+
+    * loads either via csv or existing dataframe
+    * Splits data into chunks that are used for grouping
+
+    Args:
+        chunk:  (Optional) int. Group text by chunks representing number of rows
+            that feeds into individual spacy docs.
+        df_input: (Optional) Dataframe. DataFrame where a column with "text" exists.
+        path: file path to a csv that will be read into a dataframe.
+            Necessary that there is column with "text"
         type: type of underlying file to read. i.e. csv, txt or existing dataframe
     """
 
@@ -172,19 +172,15 @@ class ConcordanceLoader:
     ) -> None:
         self.file_location = path
         self.type = type
-        self.chunk = chunk  # text_in_one_doc True needs to be associated with chunk = 1
+        self.chunk = chunk
         self.df_input = df_input
         self.re_symbol_txt = re_symbol_txt
-        if text_in_one_doc == False:
-            self.data = self.read_data_if_chunking()
-            self.grouped_data = (
-                self.process()
-            )  # Interates over chunks to create a column for grouping
-            self.ungrouped_data = self.grouped_data
-            self.data = self.group_by_chunk(self.grouped_data)  # was grouped_data
-        else:
-            self.data = self.read_data()
-            self.data = self.tag_data(self.data)  # add line tags
+        self.data = self.read_data_if_chunking()
+        self.grouped_data = (
+            self.process()
+        )  # Interates over chunks to create a column for grouping
+        self.ungrouped_data = self.grouped_data
+        self.data = self.group_by_chunk(self.grouped_data)  # was grouped_data
 
         self.largest_line_length = max(
             self.data.text.map(len)
@@ -217,7 +213,8 @@ class ConcordanceLoader:
                 df[i : i + self.chunk] for i in range(0, df.shape[0], self.chunk)
             ]
             iter_df = iter(list_df)
-            return iter_df  # passthrough input dataframe as an iterable that can be chunked / split
+            # passthrough input dataframe as an iterable that can be chunked / split
+            return iter_df
         else:
             raise ValueError("type dataframe is enabled, but df_input is None ")
 
@@ -260,10 +257,7 @@ class ConcordanceLoader:
         return total
 
     def get_grouped_data(self):
-        if text_in_one_doc == False:
-            return self.grouped_data
-        else:
-            return None
+        return self.grouped_data
 
     def get_original_data(self):
         return self.data
@@ -300,7 +294,7 @@ class ConcordanceLoader:
         try:
             results = self.app.search_table.to_dataframe()
             return results
-        except:
+        except Exception:
             return None
 
 
@@ -446,14 +440,16 @@ class ConcordanceWidget:
 
 class ContextLines:
     def __init__(self, pd_data, search_word, context_length=10) -> None:
-        """readslines of file and delivers dataframe with info on search matches
-        deliver is pd.DataFrame with columns:
-        line_no: line number in file of match
-        before: list of lines before line match
-        line :  the line of text where a match occurs
-        after: list of lines after line match
-        deliver attribute set to None if no word matches found
+        """
+        Reads lines of file and delivers dataframe with info on search matches
+        sets self.deliver, a DataFrame with columns:
 
+        * line_no: line number in file of match
+        * before: list of lines before line match
+        * line :  the line of text where a match occurs
+        * after: list of lines after line match
+
+        deliver attribute set to None if no word matches found
         """
         self.pd_data = pd_data  # pd.DataFrame with text column
         self.search_word = search_word
@@ -503,7 +499,8 @@ class ConcordanceTable:
         results_per_page: Number of results to show at a time.
         window_width: Number of characters to show either side of a match.
         sort: Sort by 'text_id', 'left_context' or 'right_context'.
-        historic_utterances: Positive Integer representing number of previous lines to give context.
+        historic_utterances: Positive Integer representing number of previous lines
+            to give context.
     """
 
     def __init__(
@@ -592,46 +589,23 @@ class ConcordanceTable:
 
         search_regex = self._get_search_regex()
 
-        if text_in_one_doc:
-            # put all text in one doc for keyword_in_context and use tags for line lookups
-            language_model = spacy.load(self.language_model)
-            seperate_doc = language_model(self.df.text.str.cat())
-            search_results = _get_matches(
-                seperate_doc
-            )  # start large to get tagged line - reset afterwards
-            results_df = pd.DataFrame(
-                search_results, columns=["left_context", "match", "right_context"]
-            )
-            results_df.name = "match"
-            if len(results_df) == 0:
-                raise NoResultsError("No results found.")
-            results_df.index.name = "text_id"
-            results_df.reset_index(inplace=True)
-            # Reorder columns
-            results_df = results_df[
-                ["text_id", "left_context", "match", "right_context"]
-            ]
+        # original code where each line is a spacy doc
+        search_results = self.df["spacy_doc"].apply(_get_matches)
+        search_results = search_results.loc[search_results.map(len) > 0].explode()
+        search_results.name = "match"
 
-        else:
-            # original code where each line is a spacy doc
-            search_results = self.df["spacy_doc"].apply(_get_matches)
-            search_results = search_results.loc[search_results.map(len) > 0].explode()
-            search_results.name = "match"
+        if len(search_results) == 0:
+            raise NoResultsError("No results found.")
 
-            if len(search_results) == 0:
-                raise NoResultsError("No results found.")
-
-            results_df = search_results.to_frame()
-            # Use apply(pd.Series) to unpack nested lists into columns
-            results_df[["left_context", "match", "right_context"]] = results_df[
-                "match"
-            ].apply(pd.Series)
-            results_df.index.name = "text_id"
-            results_df.reset_index(inplace=True)
-            # Reorder columns
-            results_df = results_df[
-                ["text_id", "left_context", "match", "right_context"]
-            ]
+        results_df = search_results.to_frame()
+        # Use apply(pd.Series) to unpack nested lists into columns
+        results_df[["left_context", "match", "right_context"]] = results_df[
+            "match"
+        ].apply(pd.Series)
+        results_df.index.name = "text_id"
+        results_df.reset_index(inplace=True)
+        # Reorder columns
+        results_df = results_df[["text_id", "left_context", "match", "right_context"]]
 
         # Could Ancor ContextLines somewhere here if the class is properly integrated
 
@@ -657,7 +631,8 @@ class ConcordanceTable:
 
         possibly_created_here = ["OriginalRow", "text_id", "row"]
 
-        # Merge current result with ungrouped data if passed through via widget. Otherwise retain older ConcordanceTable functionality
+        # Merge current result with ungrouped data if passed through via widget. Otherwise
+        # retain older ConcordanceTable functionality
         if self.ungrouped_data is not None:
             if (
                 self.additional_info is not None
@@ -677,7 +652,7 @@ class ConcordanceTable:
                 " 'left_context' or 'right_context'"
             )
         # strip unwanted tag lines if user requires
-        if self.tag_lines == False:
+        if not self.tag_lines:
             results_df = results_df.assign(
                 left_context=results_df.left_context.str.replace(
                     r"\d+--", "", regex=True
@@ -686,13 +661,11 @@ class ConcordanceTable:
                 right_context=results_df.right_context.str.replace(
                     r"\d+--", "", regex=True
                 )
-            ) #if showMore brings in original text and tag_lines set to hide tags:
+            )  # if showMore brings in original text and tag_lines set to hide tags:
             if "text" in results_df.columns:
                 results_df = results_df.assign(
-                text=results_df.text.str.replace(
-                    r"\d+--", "", regex=True
+                    text=results_df.text.str.replace(r"\d+--", "", regex=True)
                 )
-            )
 
         if "row" in results_df.columns:
             results_df = results_df.drop(columns=["row"])  # clean
@@ -916,7 +889,7 @@ class ConcordanceTable:
 
 class ConcordanceLoaderWidget:
     """
-    New widget to go with pandas stlying approach
+    New widget to go with pandas styling approach
     """
 
     def __init__(
