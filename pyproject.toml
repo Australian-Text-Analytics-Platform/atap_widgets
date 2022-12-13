@@ -35,7 +35,7 @@ dask = {version = "^2022.9.2", extras = ["dataframe"]}
 sentence-transformers = "^2.1.0"
 # Torch is needed for sentence-transformers
 # Newer versions of torch causing issues on M1 Mac
-torch = "1.12.1"
+torch = "1.13.0"
 jupyterlab = "^3.4"
 en-core-web-sm = {url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.4.0/en_core_web_sm-3.4.0-py3-none-any.whl"}
 pytest = "^7.0.1"
