@@ -123,6 +123,8 @@ def safety(session: Session) -> None:
         "44716",
         "--ignore",
         "44717",
+        "--ignore",
+        "51457",
     )
 
 
