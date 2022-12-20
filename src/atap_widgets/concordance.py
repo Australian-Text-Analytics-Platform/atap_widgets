@@ -609,10 +609,11 @@ class ConcordanceTable:
 
         # Could Ancor ContextLines somewhere here if the class is properly integrated
         
-        # searching numbers may inadvertently bring up tagged line matches leaving no left context
+        # searching numbers may inadvertently bring up tagged line matches
         # remove if this is the case
         results_df = results_df[results_df.left_context.str.contains('--')] 
-        
+        results_df = results_df[~results_df.right_context.str[:2].str.contains('--')]
+
         if self.stylingOn:
             # Extract Line number tag from original un-grouped dataframe
             results_df = results_df.assign(
