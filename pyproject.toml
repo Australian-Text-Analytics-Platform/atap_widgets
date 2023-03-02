@@ -29,7 +29,7 @@ openpyxl = "*"
 spacy = "^3.0"
 xlsxwriter = "^3"
 textacy = "*"
-dask = {version = "^2022.9.2", extras = ["dataframe"]}
+dask = {version = ">=2022.9.2,<2024.0.0", extras = ["dataframe"]}
 
 [tool.poetry.dev-dependencies]
 sentence-transformers = "^2.1.0"
