@@ -234,14 +234,14 @@ class ConcordanceLoader:
                     "text": record[1],
                 }
 
-            df = b.map(flatten).to_dataframe().compute()
+            df = b.map(flatten).to_dataframe().compute(scheduler='threads')
         else:  # just read without splitting and assume its all just text - no column structure
             b = (
                 db.read_text(self.file_location)
                 .str.strip()
                 .filter(lambda r: len(r) > 1)
             )
-            df = b.to_dataframe().compute()
+            df = b.to_dataframe().compute(scheduler='threads')
             df.columns = ["text"]
 
         return df
