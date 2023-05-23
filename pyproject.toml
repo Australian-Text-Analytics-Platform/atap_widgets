@@ -30,7 +30,7 @@ spacy = "^3.0"
 xlsxwriter = "^3"
 textacy = "*"
 dask = {version = "^2022.9.2", extras = ["dataframe"]}
-juxtorpus = {git = "git@github.com:Sydney-Informatics-Hub/juxtorpus.git", rev = "f368dacf575a1b61bd0e3abc71946420e41ba311"}
+juxtorpus = {git = "https://github.com/Sydney-Informatics-Hub/juxtorpus.git", rev = "f9711458fa3bffd65a637ecbedbe2e757cf13161"}
 
 [tool.poetry.dev-dependencies]
 sentence-transformers = "^2.1.0"
