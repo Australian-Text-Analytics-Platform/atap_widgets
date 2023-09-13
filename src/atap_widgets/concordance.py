@@ -340,7 +340,7 @@ class ConcordanceWidget:
 
             display(ipywidgets.HTML(html))
 
-        keyword_input = ipywidgets.Text(description="Keyword(s):")
+        keyword_input = ipywidgets.Text(description="Keyword(s):", continuous_update=False)
         regex_toggle_input = ipywidgets.Checkbox(
             value=False,
             description="Enable regular expressions",
@@ -948,7 +948,7 @@ class ConcordanceLoaderWidget:
             display(ipywidgets.HTML(html))
             return html
 
-        keyword_input = ipywidgets.Text(description="Keyword(s):")
+        keyword_input = ipywidgets.Text(description="Keyword(s):", continuous_update=False)
         regex_toggle_input = ipywidgets.Checkbox(
             value=False,
             description="Enable regular expressions",
