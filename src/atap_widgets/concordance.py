@@ -131,7 +131,7 @@ def prepare_text_df(
     """
     output = df.copy()
     if id_column is None:
-        output["text_id"] = pd.Series(range(output.shape[0]), dtype=pd.Int64Dtype)
+        output["text_id"] = pd.Series(range(output.shape[0]), dtype=pd.Int64Dtype())
         id_column = "text_id"
     output = output.rename(columns={text_column: "text", id_column: "text_id"})
     output = output.set_index("text_id", drop=False)
