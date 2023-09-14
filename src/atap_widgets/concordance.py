@@ -10,6 +10,7 @@ import ipywidgets
 import pandas as pd
 import spacy
 from IPython.display import display
+from spacy.lang.en import English
 from textacy.extract import keyword_in_context
 
 
@@ -108,7 +109,7 @@ def prepare_text_df(
     df: pd.DataFrame,
     text_column: str = "text",
     id_column: str = None,
-    language_model: Union[str, spacy.language.Language] = "en_core_web_sm",
+    language_model: Union[str, spacy.language.Language] = English(),
 ) -> pd.DataFrame:
     """
     Our text processing functions expect a dataframe with
@@ -127,7 +128,7 @@ def prepare_text_df(
         id_column: The current column name of the unique identifier for each text
             in df. If not given, numeric IDs will be generated for each text.
         language_model: The name of a spacy model like "en_core_web_sm", or a
-            spacy language model instance.
+            spacy language model instance. Defaults to English()
     """
     output = df.copy()
     if id_column is None:
@@ -276,7 +277,7 @@ class ConcordanceLoader:
         return grouped
 
     def show(
-        self, language_model: Union[str, spacy.language.Language] = "en_core_web_sm"
+        self, language_model: Union[str, spacy.language.Language] = English()
     ):
         prepared_df = prepare_text_df(self.data, language_model=language_model)
         widget = ConcordanceLoaderWidget(
@@ -516,7 +517,7 @@ class ConcordanceTable:
         stylingOn: bool = False,
         additional_info: str = None,
         tag_lines: bool = False,
-        language_model: str = "en_core_web_sm",
+        language_model: str = English(),
         sort: str = "text_id",
     ):
         self.df = df
