@@ -138,7 +138,7 @@ def prepare_text_df(
 
     if isinstance(language_model, str):
         language_model = spacy.load(language_model)
-    output["spacy_doc"] = output["text"].map(language_model)  # Doc for each line
+    output["spacy_doc"] = [d for d in language_model.pipe(output["text"])]  # Doc for each line
 
     return output
 
