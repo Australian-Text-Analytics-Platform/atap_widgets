@@ -139,7 +139,9 @@ def prepare_text_df(
 
     if isinstance(language_model, str):
         language_model = spacy.load(language_model)
-    output["spacy_doc"] = [d for d in language_model.pipe(output["text"])]  # Doc for each line
+    output["spacy_doc"] = [
+        d for d in language_model.pipe(output["text"])
+    ]  # Doc for each line
 
     return output
 
@@ -276,9 +278,7 @@ class ConcordanceLoader:
         grouped = df.groupby(["chunk"])["text"].apply("".join).reset_index()
         return grouped
 
-    def show(
-        self, language_model: Union[str, spacy.language.Language] = English()
-    ):
+    def show(self, language_model: Union[str, spacy.language.Language] = English()):
         prepared_df = prepare_text_df(self.data, language_model=language_model)
         widget = ConcordanceLoaderWidget(
             prepared_df,
@@ -341,7 +341,9 @@ class ConcordanceWidget:
 
             display(ipywidgets.HTML(html))
 
-        keyword_input = ipywidgets.Text(description="Keyword(s):", continuous_update=False)
+        keyword_input = ipywidgets.Text(
+            description="Keyword(s):", continuous_update=False
+        )
         regex_toggle_input = ipywidgets.Checkbox(
             value=False,
             description="Enable regular expressions",
@@ -949,7 +951,9 @@ class ConcordanceLoaderWidget:
             display(ipywidgets.HTML(html))
             return html
 
-        keyword_input = ipywidgets.Text(description="Keyword(s):", continuous_update=False)
+        keyword_input = ipywidgets.Text(
+            description="Keyword(s):", continuous_update=False
+        )
         regex_toggle_input = ipywidgets.Checkbox(
             value=False,
             description="Enable regular expressions",
