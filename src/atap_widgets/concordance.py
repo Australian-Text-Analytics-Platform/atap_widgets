@@ -10,6 +10,7 @@ import ipywidgets
 import pandas as pd
 import spacy
 from IPython.display import display
+from spacy.lang.en import English
 from textacy.extract import keyword_in_context
 
 
@@ -108,7 +109,7 @@ def prepare_text_df(
     df: pd.DataFrame,
     text_column: str = "text",
     id_column: str = None,
-    language_model: Union[str, spacy.language.Language] = "en_core_web_sm",
+    language_model: Union[str, spacy.language.Language] = English(),
 ) -> pd.DataFrame:
     """
     Our text processing functions expect a dataframe with
@@ -127,18 +128,20 @@ def prepare_text_df(
         id_column: The current column name of the unique identifier for each text
             in df. If not given, numeric IDs will be generated for each text.
         language_model: The name of a spacy model like "en_core_web_sm", or a
-            spacy language model instance.
+            spacy language model instance. Defaults to English()
     """
     output = df.copy()
     if id_column is None:
-        output["text_id"] = pd.Series(range(output.shape[0]), dtype=pd.Int64Dtype)
+        output["text_id"] = pd.Series(range(output.shape[0]), dtype=pd.Int64Dtype())
         id_column = "text_id"
     output = output.rename(columns={text_column: "text", id_column: "text_id"})
     output = output.set_index("text_id", drop=False)
 
     if isinstance(language_model, str):
         language_model = spacy.load(language_model)
-    output["spacy_doc"] = output["text"].map(language_model)  # Doc for each line
+    output["spacy_doc"] = [
+        d for d in language_model.pipe(output["text"])
+    ]  # Doc for each line
 
     return output
 
@@ -275,9 +278,7 @@ class ConcordanceLoader:
         grouped = df.groupby(["chunk"])["text"].apply("".join).reset_index()
         return grouped
 
-    def show(
-        self, language_model: Union[str, spacy.language.Language] = "en_core_web_sm"
-    ):
+    def show(self, language_model: Union[str, spacy.language.Language] = English()):
         prepared_df = prepare_text_df(self.data, language_model=language_model)
         widget = ConcordanceLoaderWidget(
             prepared_df,
@@ -340,7 +341,9 @@ class ConcordanceWidget:
 
             display(ipywidgets.HTML(html))
 
-        keyword_input = ipywidgets.Text(description="Keyword(s):")
+        keyword_input = ipywidgets.Text(
+            description="Keyword(s):", continuous_update=False
+        )
         regex_toggle_input = ipywidgets.Checkbox(
             value=False,
             description="Enable regular expressions",
@@ -516,7 +519,7 @@ class ConcordanceTable:
         stylingOn: bool = False,
         additional_info: str = None,
         tag_lines: bool = False,
-        language_model: str = "en_core_web_sm",
+        language_model: str = English(),
         sort: str = "text_id",
     ):
         self.df = df
@@ -948,7 +951,9 @@ class ConcordanceLoaderWidget:
             display(ipywidgets.HTML(html))
             return html
 
-        keyword_input = ipywidgets.Text(description="Keyword(s):")
+        keyword_input = ipywidgets.Text(
+            description="Keyword(s):", continuous_update=False
+        )
         regex_toggle_input = ipywidgets.Checkbox(
             value=False,
             description="Enable regular expressions",
