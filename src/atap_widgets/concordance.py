@@ -342,7 +342,7 @@ class ConcordanceWidget:
             display(ipywidgets.HTML(html))
 
         keyword_input = ipywidgets.Text(
-            description="Keyword(s):", continuous_update=False
+            description="Search term:", continuous_update=False
         )
         regex_toggle_input = ipywidgets.Checkbox(
             value=False,
@@ -354,7 +354,7 @@ class ConcordanceWidget:
             value=True, description="Ignore case", disabled=False
         )
         whole_word_input = ipywidgets.Checkbox(
-            value=False,
+            value=True,
             description="Match whole words",
             disabled=False,
             style={"description_width": "initial"},
@@ -952,7 +952,7 @@ class ConcordanceLoaderWidget:
             return html
 
         keyword_input = ipywidgets.Text(
-            description="Keyword(s):", continuous_update=False
+            description="Search term:", continuous_update=False
         )
         regex_toggle_input = ipywidgets.Checkbox(
             value=False,
@@ -964,7 +964,7 @@ class ConcordanceLoaderWidget:
             value=True, description="Ignore case", disabled=False
         )
         whole_word_input = ipywidgets.Checkbox(
-            value=False,
+            value=True,
             description="Match whole words",
             disabled=False,
             style={"description_width": "initial"},
