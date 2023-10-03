@@ -61,6 +61,16 @@ You can install *atap_widgets* via pip_ from PyPI_:
 
 **NOTE**: on M1 Macs with the new Apple Silicon chip, you may need a Rust compiler installed. Rust can be installed with a single command via https://rustup.rs/ . You may also need `cmake`: install via Homebrew with `brew install cmake`.
 
+
+Standalone tools
+------------
+
+Concordaner
+Use the Concordancer as a standalone tool by clicking the following Binder link
+
+.. image:: https://binderhub.atap-binder.cloud.edu.au/badge_logo.svg
+ :target: https://binderhub.atap-binder.cloud.edu.au/v2/gh/Australian-Text-Analytics-Platform/atap_widgets/concordance_standalone?labpath=concordance_standalone.ipynb
+
 Development
 ------------
 
