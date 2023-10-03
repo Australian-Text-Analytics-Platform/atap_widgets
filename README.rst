@@ -69,7 +69,7 @@ Concordaner
 Use the Concordancer as a standalone tool by clicking the following Binder link
 
 .. image:: https://binderhub.atap-binder.cloud.edu.au/badge_logo.svg
- :target: https://binderhub.atap-binder.cloud.edu.au/v2/gh/Australian-Text-Analytics-Platform/atap_widgets/concordance_standalone?labpath=concordance_standalone.ipynb
+ :target: https://binderhub.atap-binder.cloud.edu.au/v2/gh/Australian-Text-Analytics-Platform/atap_widgets/main?labpath=concordance_standalone.ipynb
 
 Development
 ------------
