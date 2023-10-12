@@ -1017,8 +1017,7 @@ class ConcordanceLoaderWidget:
                 "page": page_input,
                 "window_width": window_width_input,
                 "sort": sort_input,
-                "additional_info": additional_info,
-                "tag_lines": tag_lines,
+                "additional_info": additional_info
             },
         )
         # Excel export
@@ -1067,7 +1066,6 @@ class ConcordanceLoaderWidget:
                 sort_input,
                 additional_info,
                 export_controls,
-                tag_lines,
                 output,
             ]
         )
