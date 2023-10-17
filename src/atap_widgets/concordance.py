@@ -8,6 +8,7 @@ from typing import Union
 import dask.bag as db
 import ipywidgets
 import pandas as pd
+import pandas.io.formats.style
 import spacy
 from IPython.display import display
 from spacy.lang.en import English
@@ -816,16 +817,12 @@ class ConcordanceTable:
                 }
             ],
         }
-        html = (
-            results.style.set_table_styles(column_styles)
-            .set_table_styles(
-                [cell_hover, index_names, headers, align, centre, odd_rows, even_rows],
-                overwrite=False,
-            )
-            .to_html()
-        )
-
-        return html
+        styler = pandas.io.formats.style.Styler(results, escape='html', table_styles=[cell_hover,
+                                                                                      index_names, headers,
+                                                                                      align, centre,
+                                                                                      odd_rows, even_rows])
+        styler.set_table_styles(column_styles)
+        return styler.to_html()
 
     def to_dataframe(self) -> pd.DataFrame:
         """
@@ -937,7 +934,7 @@ class ConcordanceLoaderWidget:
                 setattr(self.search_table, attr, value)
 
             try:
-                html = self.search_table._get_html2(page=page)
+                html_text = self.search_table._get_html2(page=page)
                 if self.search_table.is_regex_valid():
                     results = self.search_table._get_results()
                     # Need at least one page
@@ -948,8 +945,8 @@ class ConcordanceLoaderWidget:
             except NoResultsError:
                 n_pages = 1
 
-            display(ipywidgets.HTML(html))
-            return html
+            display(ipywidgets.HTML(html_text))
+            return html_text
 
         keyword_input = ipywidgets.Text(
             description="Search term:", continuous_update=False
