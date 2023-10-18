@@ -235,7 +235,7 @@ class ConcordanceLoader:
             def flatten(record):
                 return {
                     "key": record[0],
-                    "text": record[1],
+                    "text": self.re_symbol_txt.join(record[1:]),
                 }
 
             df = b.map(flatten).to_dataframe().compute()
