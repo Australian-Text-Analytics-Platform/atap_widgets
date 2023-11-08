@@ -70,6 +70,13 @@ Use the Concordancer as a standalone tool by clicking the following Binder link
 .. image:: https://binderhub.atap-binder.cloud.edu.au/badge_logo.svg
  :target: https://binderhub.atap-binder.cloud.edu.au/v2/gh/Australian-Text-Analytics-Platform/atap_widgets/main?labpath=concordance_standalone.ipynb
 
+Note: CILogon authentication is required. You can use your institutional, Google or Microsoft account to login.
+
+If you do not have access to any of the above accounts, you can use the below link to access the tool (this is a free Binder version, limited to 2GB memory only).
+
+.. image:: https://mybinder.org/badge_logo.svg
+ :target: https://mybinder.org/v2/gh/Australian-Text-Analytics-Platform/atap_widgets/main?labpath=concordance_standalone.ipynb
+
 Development
 ------------
 
