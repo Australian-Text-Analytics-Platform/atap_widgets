@@ -1,0 +1,42 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: atap_widgets
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Monika
+    family-names: Bednarek
+    email: monika.bednarek@sydney.edu.au
+    affiliation: 'Professor of Linguistics, University of Sydney'
+  - given-names: Marius
+    family-names: Mather
+    affiliation: >-
+      Sydney Informatics Hub, a core research facility of
+      the University of Sydney
+    email: marius.mather@sydney.edu.au
+  - given-names: Kristian
+    family-names: Maras
+    affiliation: >-
+      Sydney Informatics Hub, a core research facility of
+      the University of Sydney
+    email: kristian.maras@sydney.edu.au
+  - given-names: Hamish
+    family-names: Croser
+    affiliation: >-
+      Sydney Informatics Hub, a core research facility of
+      the University of Sydney
+    email: hamish.croser@sydney.edu.au
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.10086733
+    description: The GitHub repository of atap_widgets
+repository-code: >-
+  https://github.com/Australian-Text-Analytics-Platform/atap_widgets
+url: 'https://www.atap.edu.au/'
+keywords:
+  - concordance
+license: Apache-2.0
