@@ -115,7 +115,7 @@ Citation
 
 If you find the ATAP Concordancer tool useful in your research, please cite the following:
 
-Bednarek, M., Mather, M., Maras, K., & Croser, H. ATAP Concordancer [Computer software]. https://github.com/Australian-Text-Analytics-Platform/atap_widgets
+Bednarek, M., Mather, M., Maras, K., & Croser, H. ATAP Concordancer [Computer software]. https://github.com/Australian-Text-Analytics-Platform/atap_widgets. https://doi.org/10.5281/zenodo.10146656
 
 
 Issues
