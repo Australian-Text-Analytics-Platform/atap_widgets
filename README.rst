@@ -110,6 +110,13 @@ License
 Distributed under the terms of the `MIT license`_,
 *atap_widgets* is free and open source software.
 
+Citation
+--------
+
+If you find the ATAP Concordancer tool useful in your research, please cite the following:
+
+Bednarek, M., Mather, M., Maras, K., & Croser, H. ATAP Concordancer [Computer software]. https://github.com/Australian-Text-Analytics-Platform/atap_widgets
+
 
 Issues
 ------

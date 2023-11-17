@@ -2,7 +2,7 @@
 # Visit https://bit.ly/cffinit to generate yours today!
 
 cff-version: 1.2.0
-title: atap_widgets
+title: ATAP Concordancer
 message: >-
   If you use this software, please cite it using the
   metadata from this file.
@@ -32,7 +32,7 @@ authors:
     email: hamish.croser@sydney.edu.au
 identifiers:
   - type: doi
-    value: 10.5281/zenodo.10086733
+    value: 10.5281/zenodo.10086731
     description: The GitHub repository of atap_widgets
 repository-code: >-
   https://github.com/Australian-Text-Analytics-Platform/atap_widgets
@@ -40,3 +40,4 @@ url: 'https://www.atap.edu.au/'
 keywords:
   - concordance
 license: Apache-2.0
+version: 0.5.3
