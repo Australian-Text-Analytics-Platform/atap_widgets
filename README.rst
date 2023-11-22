@@ -70,7 +70,7 @@ Use the Concordancer as a standalone tool by clicking the following Binder link
 .. image:: https://binderhub.atap-binder.cloud.edu.au/badge_logo.svg
  :target: https://binderhub.atap-binder.cloud.edu.au/v2/gh/Australian-Text-Analytics-Platform/atap_widgets/main?labpath=concordance_standalone.ipynb
 
-Note: CILogon authentication is required. You can use your institutional, Google or Microsoft account to login.
+Note: CILogon authentication is required. You can use your institutional, Google or Microsoft account to login. If you have trouble authenticating, please refer to the `CILogon troubleshooting guide`_.
 
 If you do not have access to any of the above accounts, you can use the below link to access the tool (this is a free Binder version, limited to 2GB memory only).
 
@@ -115,7 +115,7 @@ Citation
 
 If you find the ATAP Concordancer tool useful in your research, please cite the following:
 
-Bednarek, M., Mather, M., Maras, K., & Croser, H. (2023). ATAP Concordancer (v0.5.4) [Computer software]. https://github.com/Australian-Text-Analytics-Platform/atap_widgets. DOI. https://doi.org/10.5281/zenodo.10146656
+Bednarek, M., Mather, M., Maras, K., & Croser, H. (2023). ATAP Concordancer (v0.5.4) [Computer software]. https://github.com/Australian-Text-Analytics-Platform/atap_widgets. DOI. https://doi.org/10.5281/zenodo.10086731
 
 
 Issues
@@ -142,3 +142,4 @@ This project was generated from `@cjolowicz`_'s `Hypermodern Python Cookiecutter
 .. _Contributor Guide: CONTRIBUTING.rst
 .. _Usage: https://atap_widgets.readthedocs.io/en/latest/usage.html
 .. _atap: https://www.atap.edu.au/
+.. _CILogon troubleshooting guide: ./docs/cilogon-troubleshooting.pdf
