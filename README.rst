@@ -63,7 +63,7 @@ You can install *atap_widgets* via pip_ from PyPI_:
 
 
 Standalone tools
-------------
+----------------
 
 Use the Concordancer as a standalone tool by clicking the following Binder link
 
@@ -76,6 +76,12 @@ If you do not have access to any of the above accounts, you can use the below li
 
 .. image:: https://mybinder.org/badge_logo.svg
  :target: https://mybinder.org/v2/gh/Australian-Text-Analytics-Platform/atap_widgets/main?labpath=concordance_standalone.ipynb
+
+Concordancer Tool User Guide
+----------------------------
+
+For instructions on how to use the Concordancer tool, please refer to the `Concordancer Tool User Guide`_.
+
 
 Development
 ------------
@@ -143,3 +149,4 @@ This project was generated from `@cjolowicz`_'s `Hypermodern Python Cookiecutter
 .. _Usage: https://atap_widgets.readthedocs.io/en/latest/usage.html
 .. _atap: https://www.atap.edu.au/
 .. _CILogon troubleshooting guide: ./docs/cilogon-troubleshooting.pdf
+.. _Concordancer Tool User Guide: ./docs/concordance_help_pages.pdf
