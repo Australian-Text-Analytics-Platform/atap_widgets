@@ -18,6 +18,9 @@ def _get_remote_jupyter_proxy_url(port: int, base_url: str = None):
     if base_url is None:
         if "BINDER_EXTERNAL_URL" in os.environ:
             base_url = os.environ["BINDER_EXTERNAL_URL"]
+            if not base_url.startswith("https://"):
+                # The "https://" was removed from the ATAP binderhub since early 2025, hence need to add it back manually
+                base_url = "https://" + base_url
         else:
             base_url = DEFAULT_MYBINDER_HOST
     host = urllib.parse.urlparse(base_url).netloc
