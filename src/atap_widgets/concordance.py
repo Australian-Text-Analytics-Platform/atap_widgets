@@ -7,8 +7,26 @@ from typing import Union
 
 import dask.bag as db
 import ipywidgets
-import pandas as pd
-import pandas.io.formats.style
+
+_PANDAS_REQUIREMENT = "pandas>=1.3,<2.0"
+_NUMPY_REQUIREMENT = "numpy>=1.21,<1.24"
+
+try:
+    import pandas as pd
+    import pandas.io.formats.style
+except (ImportError, ValueError) as exc:
+    numpy_version = "unknown"
+    try:
+        import numpy as _np
+    except Exception:
+        pass
+    else:
+        numpy_version = _np.__version__
+    raise ImportError(
+        "pandas failed to import. "
+        f"atap_widgets currently requires {_PANDAS_REQUIREMENT} together with {_NUMPY_REQUIREMENT}. "
+        f"Detected numpy {numpy_version}. Install a compatible numpy version or upgrade pandas to match your runtime."
+    ) from exc
 import spacy
 from IPython.display import display
 from spacy.lang.en import English
